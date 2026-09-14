@@ -940,7 +940,9 @@ function pickGov(arName, keepDeleg){ currentGov = arName; if (!keepDeleg) curren
 function pickDeleg(name){ currentDeleg = name; localStorage.setItem('yalla.deleg', name); const d = (DELEGS[currentGov] || []).find(x => x[0] === name); tmap.setMine(currentGov, d ? [d[2], d[3]] : null); paintChosen(); drawCards(); }
 function clearPlace(){ currentGov = ''; currentDeleg = ''; localStorage.removeItem('yalla.gov'); localStorage.removeItem('yalla.deleg'); tmap.setMine('', null); paintChosen(); drawCards(); if (window.__rippleEnable) window.__rippleEnable(); const i = $('#placeInput'); if (i){ i.value = ''; i.focus(); } }
 function placeLabel(cl){ if (!currentGov) return ''; const gn = govLabel(currentGov, cl); if (!currentDeleg) return gn; return `${delegLabel(currentGov, currentDeleg, cl)} · ${gn}`; }
-function paintChosen(){ const box = $('#chosen'); if (!box) return; box.classList.toggle('on', !!currentGov); set('#chosenName','textContent', placeLabel(lang)); const pk = $('#picker'); if (pk) pk.classList.toggle('has', !!currentGov); }
+function paintChosen(){ const box = $('#chosen'); if (!box) return; box.classList.toggle('on', !!currentGov); set('#chosenName','textContent', placeLabel(lang)); const pk = $('#picker'); if (pk) pk.classList.toggle('has', !!currentGov);
+  const dl = $('#delegs'); if (dl){ $$('button', dl).forEach(b => b.remove()); const list = currentGov ? (DELEGS[currentGov] || []) : []; dl.hidden = !list.length;
+    list.forEach(d => { const b = document.createElement('button'); b.type = 'button'; b.textContent = delegLabel(currentGov, d[0], lang); b.setAttribute('aria-pressed', String(d[0] === currentDeleg)); b.onclick = () => { pickDeleg(d[0]); }; dl.appendChild(b); }); } }
 
 /* the picker: one field that knows every governorate and delegation */
 const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْ]/g,'').replace(/[-'’]/g,' ').trim();
@@ -958,7 +960,7 @@ function buildQuick(){ const box = $('#quick'); if (!box) return; $$('button', b
 (function picker(){ const input = $('#placeInput'), sugg = $('#sugg'); if (!input) return; let hot = -1, items = [];
   function render(){ sugg.innerHTML = ''; if (!input.value.trim()){ sugg.hidden = true; return; }
     if (!items.length){ sugg.innerHTML = `<div class="none">${esc(t('map.noHit'))}</div>`; sugg.hidden = false; return; }
-    items.forEach((p, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role','option'); b.className = i === hot ? 'hot' : ''; const l = p.label[lang] || p.label.ar; b.innerHTML = `<span>${esc(l)}</span><small>${esc(p.deleg ? govLabel(p.gov) : t('ch.3'))}</small>`; b.onmousedown = (e) => { e.preventDefault(); choosePlace(p); }; sugg.appendChild(b); }); sugg.hidden = false; }
+    items.forEach((p, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role','option'); b.className = i === hot ? 'hot' : ''; const l = p.label[lang] || p.label.ar; b.innerHTML = `<span>${esc(l)}</span><small>${esc(p.deleg ? govLabel(p.gov) : t('map.govWord'))}</small>`; b.onmousedown = (e) => { e.preventDefault(); choosePlace(p); }; sugg.appendChild(b); }); sugg.hidden = false; }
   input.addEventListener('input', () => { items = searchPlaces(input.value); hot = items.length ? 0 : -1; render(); });
   input.addEventListener('focus', () => { if (input.value.trim()){ items = searchPlaces(input.value); render(); } });
   input.addEventListener('blur', () => setTimeout(() => { sugg.hidden = true; }, 120));
@@ -1025,7 +1027,12 @@ const radar = (function(){ const cv = $('#radar'); if (!cv) return { add(){}, re
   return { add(){ const a = Math.random()*6.2832, r = 12 + Math.random()*26; dots.push({ x:Math.cos(a)*r, y:Math.sin(a)*r, at: performance.now() }); if (reduced) draw(performance.now()); }, reset(){ dots = []; if (reduced) draw(performance.now()); } }; })();
 function chatRestart(){ const log = $('#chatLog'); if (!log || !chatStarted) return; log.innerHTML = ''; chatStep = 0; chatDone = false; answers.length = 0; effect = 0; sceneN = 0; set('#sceneNo','textContent','0'); set('#sceneOf','textContent', String(dayScript().filter(x => x.p).length)); set('#fxNum','textContent','0'); radar.reset(); set('#chatStatus','textContent',''); chatAdvance(); }
 /* the log follows the conversation only while the reader is near the bottom; if they scrolled up to read, it leaves them there */
-function chatScroll(log){ const near = log.scrollHeight - log.scrollTop - log.clientHeight < 160; if (near) log.scrollTo({ top: log.scrollHeight, behavior: reduced ? 'auto' : 'smooth' }); }
+function chatScroll(){ newMsgCheck(); }
+const lastSeen = () => { const last = $('#chatLog') && $('#chatLog').lastElementChild; if (!last) return true; const r = last.getBoundingClientRect(); return r.top < innerHeight - 24 && r.bottom > 0; };
+async function whenRead(){ while (!lastSeen()) await sleep(250); }
+function newMsgCheck(){ const tag = $('#newMsg'); if (!tag) return; const show = chatStarted && !chatDone && !lastSeen() && ($('#chatLog').getBoundingClientRect().top < innerHeight); tag.hidden = !show; }
+addEventListener('scroll', () => newMsgCheck(), { passive: true });
+(function newMsgTag(){ const tag = $('#newMsg'); if (!tag) return; tag.onclick = () => { const last = $('#chatLog').lastElementChild; if (last) last.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }); }; })();
 function bubble(kind, text){ const log = $('#chatLog'); const b = document.createElement('div'); b.className = 'bub ' + kind; b.innerHTML = glowYalla(text); log.appendChild(b); chatScroll(log); return b; }
 function notifEl(n){ const log = $('#chatLog'); const d = document.createElement('div'); d.className = 'notif' + (n.warn ? ' warn' : '');
   d.innerHTML = `<span class="ic"><svg viewBox="0 0 48 48"><use href="#i-${esc(n.ic||'pin')}"/></svg></span><div class="tx"><span class="at">${esc(n.at)}</span>${n.f ? ` <span class="ft">${esc(n.f)}</span>` : ''}<div class="t">${esc(n.t)}</div><div class="s">${esc(n.s||'')}</div></div>`;
@@ -1034,23 +1041,23 @@ function chipsSet(list){ const log = $('#chatLog'); $$('.chiprow', log).forEach(
   list.forEach(([label, cls, fn], i) => { const c = document.createElement('button'); c.type='button'; c.className = 'chip' + (cls ? ' '+cls : ''); c.textContent = label; c.style.animationDelay = (i*70)+'ms'; c.onclick = () => { row.remove(); fn(); }; row.appendChild(c); });
   log.appendChild(row); chatScroll(log); }
 async function yallaSays(lines, kind){ set('#chatStatus','textContent', t('day.typing'));
-  for (const ln of lines){ const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 60 : 420 + Math.min(900, ln.length*14)); ty.remove();
+  for (const ln of lines){ await whenRead(); const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 60 : 420 + Math.min(900, ln.length*14)); ty.remove();
     bubble(kind || 'b', ln.replace(' {name}', userName ? ' '+userName : '').replace('{name}', userName || '')); await sleep(reduced ? 40 : 220); }
   set('#chatStatus','textContent',''); }
 async function chatAdvance(){ const sc = dayScript(); const step = sc[chatStep]; if (!step) return;
   if (step.b){ await yallaSays(step.b); }
-  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); let first = true; for (const ln of step.p){ const pb = bubble('p', ln); if (first){ pb.dataset.cap = t('day.scene') + ' ' + sceneN; first = false; } await sleep(reduced ? 40 : 900); }
-    await sleep(reduced ? 40 : 300); bubble('b q', t('day.what'));
+  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); let first = true; for (const ln of step.p){ await whenRead(); const pb = bubble('p', ln); if (first){ pb.dataset.cap = t('day.scene') + ' ' + sceneN; first = false; } await sleep(reduced ? 40 : 900); }
+    await sleep(reduced ? 40 : 300); await whenRead(); bubble('b q', t('day.what'));
     /* the person chooses; then the grey card (what usually happens), then the gold one (the same choice, with Yalla), the picture, the last words */
-    chipsSet(step.c.map(([label, without, withY]) => [label, '', async () => { bubble('u', label); answers.push(label); await sleep(reduced ? 40 : 600);
+    chipsSet(step.c.map(([label, without, withY]) => [label, '', async () => { bubble('u', label); answers.push(label); await sleep(reduced ? 40 : 600); await whenRead();
       const nb = bubble('no', without.join('\n')); nb.dataset.cap = t('day.without'); await sleep(reduced ? 60 : 1500);
       const chunks = []; for (let i = 0; i < withY.length; i += 3) chunks.push(withY.slice(i, i + 3));
-      for (const ch of chunks){ const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 40 : 650); ty.remove(); const xb = bubble('x', ch.join('\n')); xb.dataset.cap = t('day.with'); await sleep(reduced ? 40 : 900); }
-      if (step.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); chatScroll($('#chatLog')); demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.d, 640, 320, DEMO_T0 + 5000); await sleep(reduced ? 40 : 900); }
-      if (step.t){ const tb = bubble('take', step.t.join('\n')); tb.dataset.cap = t('day.part'); }
+      for (const ch of chunks){ await whenRead(); const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 40 : 650); ty.remove(); const xb = bubble('x', ch.join('\n')); xb.dataset.cap = t('day.with'); await sleep(reduced ? 40 : 900); }
+      await whenRead(); if (step.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); chatScroll($('#chatLog')); demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.d, 640, 320, DEMO_T0 + 5000); await sleep(reduced ? 40 : 900); }
+      await whenRead(); if (step.t){ const tb = bubble('take', step.t.join('\n')); tb.dataset.cap = t('day.part'); }
       effect++; set('#fxNum','textContent', String(effect)); radar.add(); chatStep++;
-      await sleep(reduced ? 40 : 500); const last = !sc.slice(chatStep).some(s => s.p); chipsSet([[t(last ? 'day.finish' : 'day.next'), 'next', () => chatAdvance()]]); }])); return; }
-  if (step.end){ chatDone = true; drawCards(); markStep('day'); record('day'); return; }
+      await sleep(reduced ? 40 : 500); await whenRead(); const last = !sc.slice(chatStep).some(s => s.p); chipsSet([[t(last ? 'day.finish' : 'day.next'), 'next', () => chatAdvance()]]); }])); return; }
+  if (step.end){ chatDone = true; newMsgCheck(); drawCards(); markStep('day'); record('day'); return; }
   chatStep++; await sleep(150); chatAdvance(); }
 
 (function daySkip(){ const b = $('#daySkip'); if (!b) return; b.onclick = () => { done.add('day'); measureProg(); paintThread(); if (window.__tourPoke) window.__tourPoke(); const c = $('#card'); if (c) c.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }; })();
