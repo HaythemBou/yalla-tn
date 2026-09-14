@@ -75,15 +75,21 @@ function setLang(l){
   if (!S[l]) return;
   lang = l; localStorage.setItem('yalla.lang', l);
   paintStrings();
-  $$('#langs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === l)));
+  $$('#langMenu button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === l))); set('#langCur', 'textContent', S[l].short);
   buildThread(); buildQuick(); paintChosen(); buildCardLangs(); buildSwatches(); paintPhotoUI(); chatRestart(); paintScene(true); if (walking && tourI >= 0 && TOUR[tourI]) gsay(tourMid ? TOUR[tourI].mid.say : TOUR[tourI].say);
   if (currentGov) pickGov(currentGov, true);
   if (window.__dnaRebuild) window.__dnaRebuild();
   drawCards();
 }
+/* one small button with the current language; it opens a short list of the three */
 (function langs(){ const box = $('#langs'); if (!box) return;
-  ['ar','fr','en'].forEach(l => { const b = document.createElement('button'); b.type='button'; b.dataset.l = l; b.textContent = S[l].short; b.title = S[l].label;
-    b.setAttribute('aria-pressed', String(l === lang)); b.onclick = () => setLang(l); box.appendChild(b); }); })();
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'langbtn'; btn.id = 'langBtn'; btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span id="langCur"></span><i class="car"></i>';
+  const menu = document.createElement('div'); menu.className = 'langmenu'; menu.id = 'langMenu'; menu.hidden = true; menu.setAttribute('role', 'listbox');
+  ['ar','fr','en'].forEach(l => { const b = document.createElement('button'); b.type = 'button'; b.dataset.l = l; b.setAttribute('role', 'option'); b.innerHTML = `<b>${S[l].short}</b><span>${S[l].label}</span>`; b.setAttribute('aria-pressed', String(l === lang)); b.onclick = () => { setLang(l); close(); }; menu.appendChild(b); });
+  const open = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }; const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.onclick = (e) => { e.stopPropagation(); menu.hidden ? open() : close(); }; document.addEventListener('click', (e) => { if (!box.contains(e.target)) close(); }); document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  box.appendChild(btn); box.appendChild(menu); set('#langCur', 'textContent', S[lang].short); })();
 (function stick(){ const h = $('#hdr'); if (!h) return; const on = () => h.classList.toggle('stuck', scrollY > 20); addEventListener('scroll', on, { passive:true }); on(); })();
 
 /* ── helpers ─────────────────────────────────────────────────────── */
