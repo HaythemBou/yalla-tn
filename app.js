@@ -8,16 +8,18 @@
    Copy lives in i18n.js. Geometry in tunisia.js / places.js.
    ═══════════════════════════════════════════════════════════════════════ */
 
+/* ?preview=1 is for testing: the page works, records are written, but the public counters are only read. */
+const PREVIEW = /preview=1/.test(location.search);
 const CONFIG = {
   counterNamespace: 'yalla-3andek-2026',
-  counterKey: 'lights-live',
+  counterKey: 'lights-launch',
   counterProviders: [
     (ns, k) => `https://abacus.jasoncameron.dev/hit/${ns}/${k}`,
     (ns, k) => `https://counterapi.com/api/${ns}/${k}/up`,
   ],
   /* a Google Apps Script web app (see record.gs). Empty = records stay in the browser. */
   recordEndpoint: 'https://script.google.com/macros/s/AKfycbw89vxNHT2ACCP69NnCksQ2QCY1xA5GznyhFdHpyYg8L0AP1zKXjAb8YQLfMYkR56V0mQ/exec',
-  sealKey: 'seals-live',
+  sealKey: 'seals-launch',
 
   shareUrl: location.origin + location.pathname,
 };
@@ -117,7 +119,7 @@ async function record(kind, extra){ const body = recordBody(kind, extra);
   if (!CONFIG.recordEndpoint) return false;
   try { await fetch(CONFIG.recordEndpoint, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body) }); return true; } catch(_){ return false; } }
 async function assignSealNo(){ if (sealNo) return sealNo; const wait = $('#sealNoWait'); if (wait) wait.hidden = false;
-  for (const build of CONFIG.counterProviders){ try { const ac = new AbortController(); const bail = setTimeout(() => ac.abort(), 4000); const res = await fetch(build(CONFIG.counterNamespace, CONFIG.sealKey), { cache:'no-store', signal:ac.signal }); clearTimeout(bail);
+  for (const build of CONFIG.counterProviders){ try { const ac = new AbortController(); const bail = setTimeout(() => ac.abort(), 4000); const res = await fetch(build(CONFIG.counterNamespace, CONFIG.sealKey).replace('/hit/', PREVIEW ? '/get/' : '/hit/'), { cache:'no-store', signal:ac.signal }); clearTimeout(bail);
     if (!res.ok) continue; const j = await res.json(); const v = j.value ?? j.count ?? (j.data && (j.data.up_count ?? j.data.value)); if (typeof v === 'number' && v > 0){ sealNo = v; break; } } catch(_){} }
   if (!sealNo) sealNo = 100000 + (hash(String(sealSeed)) % 900000);   /* offline: a number from the seed, clearly out of sequence */
   localStorage.setItem('yalla.no', String(sealNo)); if (wait) wait.hidden = true; paintSealNo(); drawCards(); record('seal'); if (window.__tourPoke) window.__tourPoke(); return sealNo; }
@@ -986,7 +988,7 @@ let lightNo = 0;
 })();
 (async function counter(){ const numEl = $('#counterNum'); if (!numEl) return; let n = null;
   /* a person is counted once: after the first visit this browser only reads the number */
-  const seen = localStorage.getItem('yalla.seen') === '1'; const build0 = CONFIG.counterProviders[0]; const readOnly = (ns, k) => build0(ns, k).replace('/hit/', '/get/');
+  const seen = localStorage.getItem('yalla.seen') === '1' || PREVIEW; const build0 = CONFIG.counterProviders[0]; const readOnly = (ns, k) => build0(ns, k).replace('/hit/', '/get/');
   for (const build of (seen ? [readOnly] : CONFIG.counterProviders)){ try { const ac = new AbortController(); const bail = setTimeout(() => ac.abort(), 2500); const res = await fetch(build(CONFIG.counterNamespace, CONFIG.counterKey), { cache:'no-store', signal:ac.signal }); clearTimeout(bail);
     if (!res.ok) continue; const j = await res.json(); const v = j.value ?? j.count ?? (j.data && (j.data.up_count ?? j.data.value)); if (typeof v === 'number' && v > 0){ n = v; break; } } catch(_){} }
   if (n === null){ n = Math.max(1, +(localStorage.getItem('yalla.localVisits')||0)+1); localStorage.setItem('yalla.localVisits', n); }
