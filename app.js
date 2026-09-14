@@ -1030,11 +1030,20 @@ async function yallaSays(lines, kind){ set('#chatStatus','textContent', t('day.t
   set('#chatStatus','textContent',''); }
 async function chatAdvance(){ const sc = dayScript(); const step = sc[chatStep]; if (!step) return;
   if (step.b){ await yallaSays(step.b); }
-  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); for (const ln of step.p){ const pb = bubble('p', ln); pb.dataset.cap = t('day.problem'); await sleep(reduced ? 40 : 900); } }
-  if (step.n){ await sleep(reduced ? 40 : 500); notifEl(step.n); if (step.n.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.n.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); $('#chatLog').scrollTop = $('#chatLog').scrollHeight; demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.n.d, 640, 320, DEMO_T0 + 5000); } await sleep(reduced ? 40 : 600);
-    chipsSet(step.u.map(([label, reaction, pt]) => [label, '', async () => { bubble('u', label); answers.push(label); await sleep(reduced ? 40 : 520); await yallaSays([reaction], 'r'); const last = $$('#chatLog .bub.r').pop(); if (last) last.dataset.cap = t('day.answer'); if (pt){ effect++; set('#fxNum','textContent', String(effect)); radar.add(); } if (step.x){ await sleep(reduced ? 40 : 400); const xb = bubble('x', step.x); xb.dataset.cap = t('day.part'); } chatStep++; await sleep(reduced ? 40 : 700); chatAdvance(); }])); return; }
+  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); for (const ln of step.p){ const pb = bubble('p', ln); pb.dataset.cap = t('day.scene') + ' ' + sceneN; await sleep(reduced ? 40 : 900); }
+    await sleep(reduced ? 40 : 300); bubble('b q', t('day.what'));
+    /* the person chooses; then the grey card (what usually happens), then the gold one (the same choice, with Yalla), the picture, the last words */
+    chipsSet(step.c.map(([label, without, withY]) => [label, '', async () => { bubble('u', label); answers.push(label); await sleep(reduced ? 40 : 600);
+      const nb = bubble('no', without.join('\n')); nb.dataset.cap = t('day.without'); await sleep(reduced ? 60 : 1500);
+      const chunks = []; for (let i = 0; i < withY.length; i += 3) chunks.push(withY.slice(i, i + 3));
+      for (const ch of chunks){ const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 40 : 650); ty.remove(); const xb = bubble('x', ch.join('\n')); xb.dataset.cap = t('day.with'); await sleep(reduced ? 40 : 900); }
+      if (step.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); $('#chatLog').scrollTop = $('#chatLog').scrollHeight; demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.d, 640, 320, DEMO_T0 + 5000); await sleep(reduced ? 40 : 900); }
+      if (step.t){ const tb = bubble('take', step.t.join('\n')); tb.dataset.cap = t('day.part'); }
+      effect++; set('#fxNum','textContent', String(effect)); radar.add(); chatStep++;
+      await sleep(reduced ? 40 : 500); const last = !sc.slice(chatStep).some(s => s.p); chipsSet([[t(last ? 'day.finish' : 'day.next'), 'next', () => chatAdvance()]]); }])); return; }
   if (step.end){ chatDone = true; drawCards(); markStep('day'); record('day'); return; }
   chatStep++; await sleep(150); chatAdvance(); }
+
 (function chatStart(){ const sec = $('#day .phone') || $('#day'); if (!sec) return; const go = () => { if (chatStarted) return; chatStarted = true; chatRestart(); };
   if (!('IntersectionObserver' in window)){ go(); return; } new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) go(); }), { threshold:.15 }).observe(sec); })();
 
@@ -1098,6 +1107,49 @@ function drawDemo(x, kind, W, H, now){
     const rs = seeded(9); for (let i = 0; i < 34; i++){ const px = W*(.14 + rs()*.72), py = H*(.5 + rs()*.3); const on = clamp((ph - i*.01)/.1, 0, 1); x.globalAlpha = on; person(px, py, i % 5 ? 'rgba(244,241,255,.55)' : '#FFE7A8', .8); x.globalAlpha = 1; }
     pill('34 ' + t('demo.people'), W*.5, H*.24);
     if (ph > .5){ const k = clamp((ph-.5)/.12, 0, 1); x.globalAlpha = k; x.fillStyle = 'rgba(63,210,192,.16)'; roundRect(x, W*.2, H*.34, W*.6, 26, 13); x.fill(); label((rtl ? 'الستاغ: ساعتين' : 'power: two hours') + ' · ' + t('demo.confirmed'), W*.5, H*.34 + 13, 12, '#BDF3EC'); check(W*.82, H*.34 + 13, 9); x.globalAlpha = 1; }
+  } else if (kind === 'drain'){
+    /* a street; the drain blocked; a call goes out; neighbours gather; it clears; the rain runs through */
+    x.fillStyle = '#1A1530'; x.fillRect(0, H*.55, W, H*.22); x.strokeStyle = 'rgba(255,255,255,.3)'; x.setLineDash([12,10]); x.lineWidth = 2; x.beginPath(); x.moveTo(0, H*.66); x.lineTo(W, H*.66); x.stroke(); x.setLineDash([]);
+    const dx = W*.5, dy = H*.78; x.fillStyle = '#07040F'; roundRect(x, dx-26, dy-8, 52, 16, 4); x.fill(); x.strokeStyle = 'rgba(255,255,255,.4)'; x.lineWidth = 1.5; for (let i = -18; i <= 18; i += 9){ x.beginPath(); x.moveTo(dx+i, dy-6); x.lineTo(dx+i, dy+6); x.stroke(); }
+    const clear = ph > .62; if (!clear){ const rs = seeded(4); for (let i = 0; i < 9; i++){ x.fillStyle = i%2 ? '#8A7A5A' : '#5E6B4A'; x.beginPath(); x.arc(dx + (rs()-.5)*60, dy - 10 - rs()*14, 4 + rs()*4, 0, 6.2832); x.fill(); } }
+    if (ph > .08 && ph < .3){ const k = (ph-.08)/.22; x.strokeStyle = `rgba(255,193,72,${((1-k)*.8).toFixed(2)})`; x.lineWidth = 2; x.beginPath(); x.arc(dx, dy, 14 + k*90, 0, 6.2832); x.stroke(); pill(t('demo.call'), dx, H*.3); }
+    const people = [[W*.22, H*.36],[W*.78, H*.4],[W*.32, H*.28],[W*.68, H*.26]]; people.forEach(([px, py], i) => { const on = clamp((ph - .28 - i*.06)/.08, 0, 1); if (on <= 0) return; const k = clamp((ph - .4)/.2, 0, 1); const tx = px + (dx + (i-1.5)*26 - px)*k, ty = py + (dy - 30 - py)*k; x.globalAlpha = on; person(tx, ty, i ? '#FFE7A8' : '#3FD2C0', 1.2); x.globalAlpha = 1; });
+    if (clear){ check(dx, dy - 34, 12); const rr = seeded(8); x.strokeStyle = 'rgba(120,180,255,.7)'; x.lineWidth = 1.5; for (let i = 0; i < 30; i++){ const rx = rr()*W, ry = ((rr()*H + time*260) % (H*.55)); x.beginPath(); x.moveTo(rx, ry); x.lineTo(rx - 3, ry + 12); x.stroke(); } x.strokeStyle = 'rgba(120,180,255,.8)'; x.lineWidth = 3; x.beginPath(); x.moveTo(dx - 60, dy - 12); x.quadraticCurveTo(dx, dy - 4, dx, dy + 6); x.stroke(); }
+  } else if (kind === 'city'){
+    /* you in the middle of a place you do not know; around you, one by one: a pharmacy, a mechanic, a bed, two people you can trust */
+    you(W*.5, H*.55); const rr = 20 + (time*60 % 150); x.strokeStyle = `rgba(255,193,72,${((1 - (rr-20)/150)*.5).toFixed(2)})`; x.lineWidth = 1.5; x.beginPath(); x.arc(W*.5, H*.55, rr, 0, 6.2832); x.stroke();
+    const spots = [[W*.2, H*.3, 'plus', t('demo.pharm'), '400 ' + t('demo.m')], [W*.8, H*.3, 'wrench', t('demo.mech'), '1.2 ' + t('demo.km')], [W*.5, H*.18, 'house', t('demo.stay'), ''], [W*.18, H*.78, 'person', t('demo.trusted'), ''], [W*.82, H*.78, 'person', t('demo.trusted'), '']];
+    spots.forEach(([px, py, ic, lb, d], i) => { const on = clamp((ph - .12 - i*.14)/.1, 0, 1); if (on <= 0) return; x.save(); x.globalAlpha = on; x.strokeStyle = 'rgba(255,193,72,.35)'; x.setLineDash([4,5]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(W*.5, H*.55); x.lineTo(px, py); x.stroke(); x.setLineDash([]);
+      dot(px, py, 30, 'rgba(255,248,228,A)', 'rgba(255,193,72,A)', .7); x.strokeStyle = '#FFE7A8'; x.fillStyle = '#FFE7A8'; x.lineWidth = 3; x.lineCap = 'round';
+      if (ic === 'plus'){ x.beginPath(); x.moveTo(px-7, py); x.lineTo(px+7, py); x.moveTo(px, py-7); x.lineTo(px, py+7); x.stroke(); }
+      else if (ic === 'wrench'){ x.beginPath(); x.moveTo(px-7, py+7); x.lineTo(px+4, py-4); x.stroke(); x.beginPath(); x.arc(px+5, py-5, 5, 0, 6.2832); x.stroke(); }
+      else if (ic === 'house'){ x.beginPath(); x.moveTo(px-9, py+2); x.lineTo(px, py-8); x.lineTo(px+9, py+2); x.stroke(); x.fillRect(px-6, py+1, 12, 8); }
+      else { person(px, py, '#3FD2C0', 1.3); check(px+9, py-11, 6); }
+      label(lb + (d ? ' · ' + d : ''), px, py + 26, 11, 'rgba(244,241,255,.85)'); x.restore(); });
+  } else if (kind === 'circle'){
+    /* five friends; thirty days that light up one by one; one falls and comes back; the memories behind */
+    for (let i = 0; i < 5; i++) person(W*(.3 + i*.1), H*.16, i === 2 ? '#FFE7A8' : 'rgba(244,241,255,.6)', 1.2);
+    const n = Math.floor(ph*36); for (let i = 0; i < 30; i++){ const cx = W*(.12 + (i%10)*.084), cy = H*(.42 + Math.floor(i/10)*.17); const done = i < n && !(i === 13 && ph > .4 && ph < .55); x.fillStyle = done ? '#FFC148' : 'rgba(255,255,255,.1)'; roundRect(x, cx-10, cy-10, 20, 20, 5); x.fill(); }
+    pill(String(Math.min(30, n)) + ' ' + t('demo.day'), W*.5, H*.9, 'rgba(63,210,192,.22)');
+    if (ph > .7){ x.globalAlpha = clamp((ph-.7)/.15, 0, 1)*.5; x.fillStyle = 'rgba(255,255,255,.14)'; roundRect(x, W*.03, H*.3, 40, 30, 4); x.fill(); roundRect(x, W*.9, H*.32, 40, 30, 4); x.fill(); x.globalAlpha = 1; }
+  } else if (kind === 'neighbour'){
+    /* a house with a faint light; you on the road; the pharmacy; the line lights up; ten minutes */
+    const hx = W*.18, hy = H*.5; x.strokeStyle = '#FFE7A8'; x.lineWidth = 3; x.lineCap = 'round'; x.beginPath(); x.moveTo(hx-24, hy+4); x.lineTo(hx, hy-20); x.lineTo(hx+24, hy+4); x.stroke(); x.fillStyle = 'rgba(255,231,168,.2)'; x.fillRect(hx-18, hy+2, 36, 26); dot(hx, hy + 14, 10, 'rgba(255,248,228,A)', 'rgba(255,193,72,A)', .35 + .3*Math.sin(time*3));
+    const qx = W*.82, qy = H*.5; x.strokeStyle = '#3FD2C0'; x.beginPath(); x.moveTo(qx-8, qy); x.lineTo(qx+8, qy); x.moveTo(qx, qy-8); x.lineTo(qx, qy+8); x.stroke(); label(t('demo.pharm'), qx, qy + 26, 11, 'rgba(244,241,255,.8)');
+    if (ph > .1){ const k = clamp((ph-.1)/.15, 0, 1); x.strokeStyle = 'rgba(255,193,72,.6)'; x.setLineDash([4,5]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx + (W*.5 - hx)*k, hy + (H*.8 - hy)*k); x.stroke(); x.setLineDash([]); }
+    const k2 = clamp((ph-.3)/.5, 0, 1); const yx = k2 < .5 ? W*.5 + (qx - W*.5)*(k2*2) : qx + (hx - qx)*((k2-.5)*2); const yy = k2 < .5 ? H*.8 + (qy - H*.8)*(k2*2) : qy + (hy + 30 - qy)*((k2-.5)*2); you(yx, yy);
+    if (ph > .85){ check(hx, hy - 34, 12); pill('10 ' + t('demo.min'), W*.5, H*.16, 'rgba(63,210,192,.22)'); }
+  } else if (kind === 'streak30'){
+    /* thirty days lighting one by one; the count 3, 10, 21, 30; three people walking together */
+    const n = Math.floor(ph*32); for (let i = 0; i < 30; i++){ const cx = W*(.08 + (i%15)*.06), cy = H*(.3 + Math.floor(i/15)*.16); x.fillStyle = i < n ? '#FFC148' : 'rgba(255,255,255,.1)'; roundRect(x, cx-8, cy-8, 16, 16, 4); x.fill(); }
+    const m = Math.min(30, n); pill((m < 3 ? '1' : m < 10 ? '3' : m < 21 ? '10' : m < 30 ? '21' : '30') + ' ' + t('demo.day'), W*.5, H*.12, 'rgba(63,210,192,.22)');
+    const wx = (time*40) % (W*1.2) - W*.1; person(wx, H*.8, '#FFE7A8', 1.3); person(wx - 28, H*.8, '#3FD2C0', 1.3); person(wx + 28, H*.8, 'rgba(244,241,255,.6)', 1.3);
+  } else if (kind === 'blood'){
+    /* the hospital in the middle; a pulse goes out; four people light up and come */
+    const cx = W*.5, cy = H*.5; x.fillStyle = '#1B1236'; roundRect(x, cx-26, cy-22, 52, 44, 6); x.fill(); x.strokeStyle = '#FF7A5C'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx-9, cy); x.lineTo(cx+9, cy); x.moveTo(cx, cy-9); x.lineTo(cx, cy+9); x.stroke(); label(t('demo.hospital'), cx, cy + 36, 11, 'rgba(244,241,255,.8)');
+    for (let r = 0; r < 3; r++){ const rr = ((time*70 + r*60) % 180); x.strokeStyle = `rgba(255,122,92,${((1 - rr/180)*.6).toFixed(2)})`; x.lineWidth = 2; x.beginPath(); x.arc(cx, cy, 30 + rr, 0, 6.2832); x.stroke(); }
+    const ppl = [[W*.15, H*.25],[W*.85, H*.3],[W*.2, H*.8],[W*.8, H*.78]]; ppl.forEach(([px, py], i) => { const on = clamp((ph - .15 - i*.08)/.08, 0, 1); if (on <= 0) return; const k = clamp((ph - .45)/.35, 0, 1); x.globalAlpha = on; person(px + (cx - 40*Math.sign(px-cx) - px)*k, py + (cy + 30*Math.sign(py-cy) - py)*k, '#FF9C85', 1.3); x.globalAlpha = 1; });
+    pill('O-', W*.5, H*.14, 'rgba(255,122,92,.22)'); if (ph > .8) pill('4 · 40 ' + t('demo.min'), W*.5, H*.9, 'rgba(63,210,192,.22)');
   } else if (kind === 'effect'){
     /* three bars for you, one number for the street */
     const bars = [[4, t('demo.fixedN')], [9, t('demo.helped')], [3, t('demo.challenges')]]; const k = clamp(ph/.6, 0, 1);
