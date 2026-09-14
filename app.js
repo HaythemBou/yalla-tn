@@ -105,7 +105,7 @@ const STEPS = ['seal','name','story','place','day','card','end'];
 const STEP_EL = { seal:'#pad', name:'#namebox', story:'#stage', place:'#picker', day:'#day .phone', card:'#card .cardframe', end:'#end .head' };
 const done = new Set();
 function measureProg(){ const docH = document.documentElement.scrollHeight - innerHeight; scrollProg = docH > 0 ? clamp(scrollY/docH, 0, 1) : 1; prog = Math.max(scrollProg*.3, done.size/STEPS.length); progListeners.forEach(f => f(prog)); }
-function markStep(k){ if (done.has(k)) return; done.add(k); measureProg(); paintThread(); paintReceipt(); if (window.__dnaRedraw) window.__dnaRedraw(); if (window.__tourPoke) window.__tourPoke(); if (k === 'end'){ paintSealNo(); record('complete'); } }
+function markStep(k){ if (done.has(k)) return; done.add(k); if (k === 'seal') document.body.classList.add('sealed'); measureProg(); paintThread(); paintReceipt(); if (window.__dnaRedraw) window.__dnaRedraw(); if (window.__tourPoke) window.__tourPoke(); if (k === 'end'){ paintSealNo(); record('complete'); } }
 addEventListener('scroll', measureProg, { passive:true }); addEventListener('resize', measureProg);
 
 /* the receipt: what you did */
@@ -577,7 +577,8 @@ function paintScene(force){
   /* the reel: each scene plays for DUR ms, then the next. Tap the sides, swipe, or use the arrows. Pauses off screen. */
   const DUR = 2600, reel = $('#reel'); let sceneT0 = performance.now(), paused = true, acted = false;
   const HINTS = ['h1','h2','h3','h4','h5'];
-  function paintHint(){ const el = $('#sceneHint'); if (el) el.textContent = t('story.' + HINTS[scene]); st.classList.toggle('acted', acted); const nb = $('#sceneNextBtn'); if (nb) nb.setAttribute('aria-disabled', String(!(acted && local >= .8))); }
+  const TAP_AT = [[50, 82], [50, 55], [50, 33], [50, 36], [50, 42]];
+  function paintHint(){ const el = $('#sceneHint'); if (el) el.textContent = t('story.' + HINTS[scene]); const tm = $('#tapMark'); if (tm){ tm.style.left = TAP_AT[scene][0] + '%'; tm.style.top = TAP_AT[scene][1] + '%'; } st.classList.toggle('acted', acted); const nb = $('#sceneNextBtn'); if (nb) nb.setAttribute('aria-disabled', String(!(acted && local >= .8))); }
   function act(){ if (acted) return; acted = true; sceneT0 = performance.now(); paintHint(); reel.classList.add('told'); if (reduced){ sceneT0 = performance.now() - DUR - 1; draw(performance.now()); paintHint(); } }
   function go(idx, why){ if (idx >= 5){ markStep('story'); if (why === 'auto') return; } if (idx < 0) idx = 0; scene = idx % 5; sceneIdx = scene; sceneT0 = performance.now(); local = 0; acted = false; paintHint();
     reel.classList.remove('on'); st.classList.add('switching'); setTimeout(() => { paintScene(false); reel.classList.add('on'); st.classList.remove('switching'); }, 160);
@@ -947,7 +948,7 @@ function searchPlaces(q){ const n = norm(q); if (!n) return []; const idx = plac
   return [...starts, ...has].slice(0, 7); }
 function choosePlace(p){ if (p.deleg){ currentDeleg = p.deleg; pickGov(p.gov, true); pickDeleg(p.deleg); } else pickGov(p.gov); const i = $('#placeInput'); if (i){ i.value = ''; i.blur(); } $('#sugg').hidden = true;
   if (innerWidth < 920) $('.mapbox').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block:'center' }); }
-function buildQuick(){ const box = $('#quick'); if (!box) return; $$('button', box).forEach(b => b.remove()); (window.CONTENT.quick || []).forEach(ar => { if (!govRow(ar)) return; const b = document.createElement('button'); b.type = 'button'; b.textContent = govLabel(ar); b.onclick = () => choosePlace({ gov:ar, deleg:'' }); box.appendChild(b); }); }
+function buildQuick(){ const box = $('#quick'); if (!box) return; $$('button', box).forEach(b => b.remove()); (window.PLACES || []).map(p => p[1]).forEach(ar => { if (!govRow(ar)) return; const b = document.createElement('button'); b.type = 'button'; b.textContent = govLabel(ar); b.onclick = () => choosePlace({ gov:ar, deleg:'' }); box.appendChild(b); }); }
 (function picker(){ const input = $('#placeInput'), sugg = $('#sugg'); if (!input) return; let hot = -1, items = [];
   function render(){ sugg.innerHTML = ''; if (!input.value.trim()){ sugg.hidden = true; return; }
     if (!items.length){ sugg.innerHTML = `<div class="none">${esc(t('map.noHit'))}</div>`; sugg.hidden = false; return; }
@@ -1017,33 +1018,36 @@ const radar = (function(){ const cv = $('#radar'); if (!cv) return { add(){}, re
   requestAnimationFrame(draw); if (reduced) draw(performance.now());
   return { add(){ const a = Math.random()*6.2832, r = 12 + Math.random()*26; dots.push({ x:Math.cos(a)*r, y:Math.sin(a)*r, at: performance.now() }); if (reduced) draw(performance.now()); }, reset(){ dots = []; if (reduced) draw(performance.now()); } }; })();
 function chatRestart(){ const log = $('#chatLog'); if (!log || !chatStarted) return; log.innerHTML = ''; chatStep = 0; chatDone = false; answers.length = 0; effect = 0; sceneN = 0; set('#sceneNo','textContent','0'); set('#sceneOf','textContent', String(dayScript().filter(x => x.p).length)); set('#fxNum','textContent','0'); radar.reset(); set('#chatStatus','textContent',''); chatAdvance(); }
-function bubble(kind, text){ const log = $('#chatLog'); const b = document.createElement('div'); b.className = 'bub ' + kind; b.innerHTML = glowYalla(text); log.appendChild(b); log.scrollTop = log.scrollHeight; return b; }
+/* the log follows the conversation only while the reader is near the bottom; if they scrolled up to read, it leaves them there */
+function chatScroll(log){ const near = log.scrollHeight - log.scrollTop - log.clientHeight < 160; if (near) log.scrollTo({ top: log.scrollHeight, behavior: reduced ? 'auto' : 'smooth' }); }
+function bubble(kind, text){ const log = $('#chatLog'); const b = document.createElement('div'); b.className = 'bub ' + kind; b.innerHTML = glowYalla(text); log.appendChild(b); chatScroll(log); return b; }
 function notifEl(n){ const log = $('#chatLog'); const d = document.createElement('div'); d.className = 'notif' + (n.warn ? ' warn' : '');
   d.innerHTML = `<span class="ic"><svg viewBox="0 0 48 48"><use href="#i-${esc(n.ic||'pin')}"/></svg></span><div class="tx"><span class="at">${esc(n.at)}</span>${n.f ? ` <span class="ft">${esc(n.f)}</span>` : ''}<div class="t">${esc(n.t)}</div><div class="s">${esc(n.s||'')}</div></div>`;
-  log.appendChild(d); log.scrollTop = log.scrollHeight; }
+  log.appendChild(d); chatScroll(log); }
 function chipsSet(list){ const log = $('#chatLog'); $$('.chiprow', log).forEach(n => n.remove()); const row = document.createElement('div'); row.className = 'chiprow';
   list.forEach(([label, cls, fn], i) => { const c = document.createElement('button'); c.type='button'; c.className = 'chip' + (cls ? ' '+cls : ''); c.textContent = label; c.style.animationDelay = (i*70)+'ms'; c.onclick = () => { row.remove(); fn(); }; row.appendChild(c); });
-  log.appendChild(row); log.scrollTop = log.scrollHeight; }
+  log.appendChild(row); chatScroll(log); }
 async function yallaSays(lines, kind){ set('#chatStatus','textContent', t('day.typing'));
   for (const ln of lines){ const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 60 : 420 + Math.min(900, ln.length*14)); ty.remove();
     bubble(kind || 'b', ln.replace(' {name}', userName ? ' '+userName : '').replace('{name}', userName || '')); await sleep(reduced ? 40 : 220); }
   set('#chatStatus','textContent',''); }
 async function chatAdvance(){ const sc = dayScript(); const step = sc[chatStep]; if (!step) return;
   if (step.b){ await yallaSays(step.b); }
-  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); for (const ln of step.p){ const pb = bubble('p', ln); pb.dataset.cap = t('day.scene') + ' ' + sceneN; await sleep(reduced ? 40 : 900); }
+  if (step.p){ sceneN++; set('#sceneNo','textContent', String(sceneN)); let first = true; for (const ln of step.p){ const pb = bubble('p', ln); if (first){ pb.dataset.cap = t('day.scene') + ' ' + sceneN; first = false; } await sleep(reduced ? 40 : 900); }
     await sleep(reduced ? 40 : 300); bubble('b q', t('day.what'));
     /* the person chooses; then the grey card (what usually happens), then the gold one (the same choice, with Yalla), the picture, the last words */
     chipsSet(step.c.map(([label, without, withY]) => [label, '', async () => { bubble('u', label); answers.push(label); await sleep(reduced ? 40 : 600);
       const nb = bubble('no', without.join('\n')); nb.dataset.cap = t('day.without'); await sleep(reduced ? 60 : 1500);
       const chunks = []; for (let i = 0; i < withY.length; i += 3) chunks.push(withY.slice(i, i + 3));
       for (const ch of chunks){ const ty = bubble('b typing',''); ty.innerHTML = '<i></i><i></i><i></i>'; await sleep(reduced ? 40 : 650); ty.remove(); const xb = bubble('x', ch.join('\n')); xb.dataset.cap = t('day.with'); await sleep(reduced ? 40 : 900); }
-      if (step.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); $('#chatLog').scrollTop = $('#chatLog').scrollHeight; demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.d, 640, 320, DEMO_T0 + 5000); await sleep(reduced ? 40 : 900); }
+      if (step.d){ const cv = document.createElement('canvas'); cv.className = 'demo'; cv.dataset.demo = step.d; cv.width = 640; cv.height = 320; $('#chatLog').appendChild(cv); chatScroll($('#chatLog')); demoLive(cv); if (reduced) drawDemo(cv.getContext('2d'), step.d, 640, 320, DEMO_T0 + 5000); await sleep(reduced ? 40 : 900); }
       if (step.t){ const tb = bubble('take', step.t.join('\n')); tb.dataset.cap = t('day.part'); }
       effect++; set('#fxNum','textContent', String(effect)); radar.add(); chatStep++;
       await sleep(reduced ? 40 : 500); const last = !sc.slice(chatStep).some(s => s.p); chipsSet([[t(last ? 'day.finish' : 'day.next'), 'next', () => chatAdvance()]]); }])); return; }
   if (step.end){ chatDone = true; drawCards(); markStep('day'); record('day'); return; }
   chatStep++; await sleep(150); chatAdvance(); }
 
+(function daySkip(){ const b = $('#daySkip'); if (!b) return; b.onclick = () => { done.add('day'); measureProg(); paintThread(); if (window.__tourPoke) window.__tourPoke(); const c = $('#card'); if (c) c.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }; })();
 (function chatStart(){ const sec = $('#day .phone') || $('#day'); if (!sec) return; const go = () => { if (chatStarted) return; chatStarted = true; chatRestart(); };
   if (!('IntersectionObserver' in window)){ go(); return; } new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) go(); }), { threshold:.15 }).observe(sec); })();
 
@@ -1168,19 +1172,26 @@ if (reduced) $$('canvas.demo').forEach(cv => drawDemo(cv.getContext('2d'), cv.da
 /* ═══════════════════════════════════════════════════════════════════
    THE SEAL ON THE PHOTO
    ═══════════════════════════════════════════════════════════════════ */
-let photoImg = null, photoMode = 'full', cardLang = null, accent = 0;
+let photoImg = null, photoMode = 'full', cardLang = null, accent = 0, photoZoom = 1, photoDX = 0, photoDY = 0, showNo = true, placeMode = 'full';
 const MARK_IMG = new Image(); MARK_IMG.onload = () => drawCards(); MARK_IMG.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(MARK);
 const CL = () => cardLang || lang;
 const TT = (k) => (S[CL()] && S[CL()][k]) || S.ar[k] || k;
 const ACCENTS = () => secretOn ? [...window.CONTENT.accents, window.CONTENT.secretAccent] : window.CONTENT.accents;
 const ACC = () => ACCENTS()[accent] || ACCENTS()[0];
-function paintPhotoUI(){ const lbl = $('#photoLabel'), clr = $('#photoClear'); if (lbl) lbl.textContent = photoImg ? t('card.photoChange') : t('card.photo'); if (clr) clr.hidden = !photoImg; $$('#cardModes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === photoMode))); }
+function paintPhotoUI(){ const lbl = $('#photoLabel'), clr = $('#photoClear'); if (lbl) lbl.textContent = photoImg ? t('card.photoChange') : t('card.photo'); if (clr) clr.hidden = !photoImg; const pc = $('#photoCtl'); if (pc) pc.hidden = !photoImg; const cf = $('.cardframe'); if (cf) cf.classList.toggle('grab', !!photoImg); $$('#cardModes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === photoMode))); }
 (function photo(){ const input = $('#photoInput'), btn = $('#photoBtn'), clr = $('#photoClear'); if (!input || !btn) return; btn.onclick = () => input.click();
   input.onchange = () => { const f = input.files && input.files[0]; if (!f || !/^image\//.test(f.type)) return; const fr = new FileReader(); fr.onload = () => { const im = new Image(); im.onload = () => { photoImg = im; paintPhotoUI(); drawCards(); }; im.src = fr.result; }; fr.readAsDataURL(f); };
   if (clr) clr.onclick = () => { photoImg = null; input.value = ''; paintPhotoUI(); drawCards(); };
-  $$('#cardModes button').forEach(b => { b.onclick = () => { photoMode = b.dataset.mode; paintPhotoUI(); drawCards(); }; }); paintPhotoUI(); })();
-function photoCircle(x, cx, cy, r){ if (!photoImg) return false; const iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, side = Math.min(iw,ih); x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.2832); x.clip(); x.drawImage(photoImg,(iw-side)/2,(ih-side)/2,side,side,cx-r,cy-r,r*2,r*2); x.restore(); return true; }
-function photoCover(x, rx, ry, w, h){ if (!photoImg) return false; const iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, sc = Math.max(w/iw, h/ih); x.drawImage(photoImg, rx+(w-iw*sc)/2, ry+(h-ih*sc)/2, iw*sc, ih*sc); return true; }
+  $$('#cardModes button').forEach(b => { b.onclick = () => { photoMode = b.dataset.mode; paintPhotoUI(); drawCards(); }; }); paintPhotoUI();
+  /* move the photo with a finger, zoom with the slider */
+  const zr = $('#photoZoom'); if (zr) zr.oninput = () => { photoZoom = +zr.value; drawCards(); };
+  const cf = $('.cardframe'); if (cf){ let drag = null, raf = 0; cf.addEventListener('pointerdown', (e) => { if (!photoImg) return; drag = { x: e.clientX, y: e.clientY, dx: photoDX, dy: photoDY }; cf.setPointerCapture(e.pointerId); e.preventDefault(); });
+    cf.addEventListener('pointermove', (e) => { if (!drag) return; const r = cf.getBoundingClientRect(); photoDX = clamp(drag.dx + (e.clientX - drag.x)/r.width, -.8, .8); photoDY = clamp(drag.dy + (e.clientY - drag.y)/r.height, -.8, .8); if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawCards(); }); });
+    const up = () => { drag = null; }; cf.addEventListener('pointerup', up); cf.addEventListener('pointercancel', up); }
+  const opt = (id, fn) => $$('#' + id + ' button').forEach(b => { b.onclick = () => { $$('#' + id + ' button').forEach(o => o.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); fn(b.dataset.v); drawCards(); }; });
+  opt('optNo', (v) => { showNo = v === '1'; }); opt('optPlace', (v) => { placeMode = v; }); })();
+function photoCircle(x, cx, cy, r){ if (!photoImg) return false; const iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, side = Math.min(iw,ih)/photoZoom; x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.2832); x.clip(); x.drawImage(photoImg,(iw-side)/2 - photoDX*side*2,(ih-side)/2 - photoDY*side*2,side,side,cx-r,cy-r,r*2,r*2); x.restore(); return true; }
+function photoCover(x, rx, ry, w, h){ if (!photoImg) return false; const iw = photoImg.naturalWidth, ih = photoImg.naturalHeight, sc = Math.max(w/iw, h/ih)*photoZoom; x.drawImage(photoImg, rx+(w-iw*sc)/2 + photoDX*w, ry+(h-ih*sc)/2 + photoDY*h, iw*sc, ih*sc); return true; }
 function buildCardLangs(){ const box = $('#cardLangs'); if (!box) return; box.innerHTML = ''; ['ar','fr','en'].forEach(l => { const b = document.createElement('button'); b.type='button'; b.textContent = S[l].label; b.setAttribute('aria-pressed', String(CL() === l)); b.onclick = () => { cardLang = l; $$('#cardLangs button').forEach(o => o.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); drawCards(); }; box.appendChild(b); }); }
 function buildSwatches(){ const box = $('#swatches'); if (!box) return; box.innerHTML = ''; ACCENTS().forEach(([k,c], i) => { const b = document.createElement('button'); b.type='button'; b.title = k; b.style.setProperty('--c', c); if (k === 'nejma') b.className = 'secret'; b.setAttribute('aria-pressed', String(i === accent)); b.onclick = () => { accent = i; $$('#swatches button').forEach((o,j) => o.setAttribute('aria-pressed', String(j === i))); drawCards(); }; box.appendChild(b); }); }
 
@@ -1225,14 +1236,14 @@ function drawCard(cv, shape){
   /* the words: two lines, dark on the colour */
   x.textAlign = alignS; x.direction = rtl ? 'rtl' : 'ltr';
   const ink = overlay ? '#FFF8EC' : '#160D30'; let y = seam + S_(circle ? .46 : .26);
-  const place = placeLabel(CL());
+  const place = placeMode === 'none' ? '' : placeMode === 'gov' ? (currentGov ? govLabel(currentGov, CL()) : '') : placeLabel(CL());
   x.font = `900 ${S_(.14)}px ${F}`; x.save(); x.shadowColor = 'rgba(255,255,255,.55)'; x.shadowBlur = S_(.04); x.fillStyle = ink; x.fillText(TT('card.line1'), xs(.07), y); x.restore();
   if (place){ y += S_(.085); x.font = `900 ${S_(.062)}px ${F}`; x.fillStyle = ink; x.fillText(`${TT('card.of')} ${place}.`, xs(.07), y); }
   y += S_(.1); x.font = `900 ${S_(.09)}px ${F}`; x.fillStyle = overlay ? colL : 'rgba(22,13,48,.8)'; x.fillText(TT('card.line2'), xs(.07), y);
   if (name){ y += S_(.075); fitFont(x, name, W*.8, S_(.05), S_(.036), 700, F); x.fillStyle = overlay ? '#FFF8EC' : 'rgba(22,13,48,.75)'; x.fillText(name, xs(.07), y); }
   /* the handle, small, at the foot; the founders' ribbon, top corner */
   x.textAlign = 'center'; x.direction = 'ltr'; x.font = `800 ${S_(.034)}px Inter, sans-serif`; x.save(); x.fillStyle = overlay ? '#FFF8EC' : '#160D30'; x.shadowColor = overlay ? 'rgba(0,0,0,.6)' : 'rgba(255,255,255,.5)'; x.shadowBlur = S_(.02); x.fillText('@yalla.3andek', W/2, H - S_(.045)); x.restore();
-  if (sealNo){ const txt = TT('card.noLine').replace('{n}', fmt(sealNo)) + (tier() ? ' · ' + TT('tier.c' + tier()) : ''); x.font = `900 ${S_(.026)}px ${F}`; x.direction = rtl ? 'rtl' : 'ltr'; const tw2 = x.measureText(txt).width + S_(.06); const rh = S_(.05); const rx = rtl ? S_(.05) : W - S_(.05) - tw2; x.save(); x.fillStyle = 'rgba(22,13,48,.85)'; roundRect(x, rx, S_(.05), tw2, rh, rh/2); x.fill(); x.fillStyle = '#FFE7A8'; x.fillText(txt, rx + tw2/2, S_(.05) + rh*.68); x.restore(); }
+  if (sealNo && showNo){ const txt = TT('card.noLine').replace('{n}', fmt(sealNo)) + (tier() ? ' · ' + TT('tier.c' + tier()) : ''); x.font = `900 ${S_(.026)}px ${F}`; x.direction = rtl ? 'rtl' : 'ltr'; const tw2 = x.measureText(txt).width + S_(.06); const rh = S_(.05); const rx = rtl ? S_(.05) : W - S_(.05) - tw2; x.save(); x.fillStyle = 'rgba(22,13,48,.85)'; roundRect(x, rx, S_(.05), tw2, rh, rh/2); x.fill(); x.fillStyle = '#FFE7A8'; x.fillText(txt, rx + tw2/2, S_(.05) + rh*.68); x.restore(); }
   /* the brand mark, top inline-start */
   if (MARK_IMG.complete && MARK_IMG.naturalWidth){ const ms = S_(.09); x.drawImage(MARK_IMG, rtl ? W - S_(.05) - ms : S_(.05), S_(.04), ms, ms); }
   x.textAlign = 'center';
@@ -1284,21 +1295,21 @@ const TOUR = [
   { k:'card',  say:'guide.s6', ok:'guide.ok6', wait:() => done.has('card'), skip:true },
   { k:'end',   say:'guide.s7', ok:'guide.ok7', wait:() => done.has('end') && !!sealNo },
 ];
-let tourI = -1, tourMid = false, tourTimer = 0, tourBusy = false;
+let tourI = -1, tourMid = false, tourTimer = 0, tourBusy = false, tourPending = false;
 const gsay = (key, pulse) => { const el = $('#guideText'); if (!el) return; el.textContent = t(key).replace('{name}', userName || ''); if (pulse){ el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); } };
 function scrollToStep(sel){ const el = $(sel); if (!el) return; const top = sel === '#card .cardframe' || sel === '#picker'; el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: top ? 'start' : 'center' }); }
 function tourStep(i){ tourBusy = false; tourI = i; tourMid = false; const st = TOUR[i]; if (!st){ return; } curStep = st.k; paintThread(); if (window.__dnaRedraw) window.__dnaRedraw();
   const chip = $('#guideChip'); chip.hidden = !st.skip; chip.textContent = t('guide.skip'); chip.onclick = () => { done.add(st.k); tourNext(false); };
   if (st.wait()){ tourNext(true); return; }
-  scrollToStep(STEP_EL[st.k]); gsay(st.say, true); if (st.enter) st.enter();
-  if (st.focus){ setTimeout(() => { const f = $(st.focus); if (f && innerWidth > 760) f.focus({ preventScroll:true }); }, 700); }
+  tourPending = true; const el0 = $(STEP_EL[st.k]); const r0 = el0 ? el0.getBoundingClientRect() : null; if (r0 && r0.top < innerHeight*.7 && r0.bottom > 0){ tourPending = false; gsay(st.say, true); if (st.enter) st.enter(); } else gsay('guide.down', true);
   clearInterval(tourTimer); tourTimer = setInterval(tourPoke, 400); }
 function tourPoke(){ if (!walking || tourI < 0) return; const st = TOUR[tourI]; if (!st) return;
+  if (tourPending){ const el = $(STEP_EL[st.k]); const r = el ? el.getBoundingClientRect() : null; if (r && r.top < innerHeight*.7 && r.bottom > 0){ tourPending = false; gsay(st.say, true); if (st.enter) st.enter(); } else if (!st.wait()) return; }
   if (st.mid && !tourMid && st.mid.when()){ tourMid = true; gsay(st.mid.say, true); scrollToStep(st.mid.el); }
   if (st.wait()) tourNext(true); }
 function tourNext(thank){ if (tourBusy) return; tourBusy = true; clearInterval(tourTimer); const st = TOUR[tourI]; $('#guideChip').hidden = true;
   if (thank && st){ gsay(st.ok, true); starBurst(); }
-  const last = tourI >= TOUR.length - 1; if (last){ setTimeout(() => { scrollToStep('#teamText'); }, 2600); return; }
+  const last = tourI >= TOUR.length - 1; if (last) return;
   setTimeout(() => tourStep(tourI + 1), thank ? 2600 : 200); }
 window.__tourPoke = () => { if (walking) tourPoke(); };
 (function walk(){ const btn = $('#startBtn'), bar = $('#guide'); if (!btn || !bar) return;

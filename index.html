@@ -301,6 +301,35 @@ html[dir="ltr"] .pickfield input{padding:16px 22px 16px 52px}
 .bub.take{justify-self:stretch;max-width:100%;background:rgba(255,193,72,.08);border-inline-start:3px solid var(--gold);color:var(--ink);font-weight:700;font-size:.86rem;border-radius:6px 16px 16px 6px}
 .bub.take::before{color:var(--gold)}
 .chip.next{border-color:var(--gold);background:var(--gold);color:#160D30}
+/* the guide lives at the bottom: the top is where in-app browsers put their own bars */
+.guide{top:auto;bottom:max(14px,env(safe-area-inset-bottom))}
+.guide .in{box-shadow:0 -14px 40px rgba(0,0,0,.45),0 0 0 1.5px rgba(255,193,72,.35)}
+.guide .gl{flex:0 0 auto;font-size:.66rem;font-weight:900;letter-spacing:.06em;color:var(--gold);background:rgba(255,193,72,.14);padding:3px 8px;border-radius:999px}
+/* where to press: a halo that breathes, and an arrow that points down at it */
+.press::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:2px solid rgba(255,193,72,.7);animation:padHalo 1.6s ease-out infinite;pointer-events:none}
+.padlabel::after{content:"";display:block;margin:8px auto 0;width:14px;height:14px;border-right:3px solid var(--gold);border-bottom:3px solid var(--gold);transform:rotate(45deg);animation:padArrow 1.2s ease-in-out infinite}
+body.sealed .press::before,body.sealed .padlabel::after{display:none}
+@keyframes padHalo{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.18);opacity:0}}
+@keyframes padArrow{0%,100%{transform:rotate(45deg) translate(0,0)}50%{transform:rotate(45deg) translate(4px,4px)}}
+/* the story: a marker where to tap, instead of a sentence at the top */
+.stage .hint{display:none}
+.stage .tapmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;display:grid;justify-items:center;gap:6px;transition:opacity .3s,left .4s,top .4s}
+.stage .tapmark i{width:34px;height:34px;border-radius:50%;border:3px solid var(--gold-2);box-shadow:0 0 18px var(--gold);position:relative}
+.stage .tapmark i::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:2px solid rgba(255,231,168,.8);animation:padHalo 1.4s ease-out infinite}
+.stage .tapmark b{font-size:.82rem;font-weight:900;color:var(--gold-2);background:rgba(6,3,15,.7);padding:5px 12px;border-radius:999px;white-space:nowrap}
+.stage.acted .tapmark{opacity:0}
+.stage .tapmark{z-index:5}
+body.walk{padding-bottom:96px}
+/* the chat: answers side by side, the last one alone across */
+.chiprow{grid-template-columns:1fr 1fr}
+.chip{padding:11px 10px;font-size:.84rem;line-height:1.3}
+.chiprow .chip:last-child:nth-child(odd){grid-column:1/-1}
+.dayskip{margin:12px auto 0;display:flex}
+/* the post: the photo can be moved; the slider; the options */
+.cardframe.grab{cursor:grab;touch-action:none}
+.photoctl{margin-top:10px;display:grid;gap:6px}
+.photoctl label{display:grid;gap:4px;font-size:.82rem;font-weight:700;color:var(--ink-2)}
+.photoctl input[type=range]{width:100%;accent-color:var(--gold)}
 .bub.typing{color:var(--ink-3);font-size:.8rem;padding:9px 14px}
 .bub.typing i{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-inline:2px;animation:dot 1s infinite}
 .bub.typing i:nth-child(2){animation-delay:.15s}.bub.typing i:nth-child(3){animation-delay:.3s}
@@ -519,6 +548,7 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
       <button class="tapzone nextz" type="button" id="sceneNext" aria-label="next"></button>
       <span class="hint on" id="sceneHint"></span>
       <div class="scene-text"><div class="scene-t" id="sceneT"></div><div class="scene-b" id="sceneB"></div><div class="scene-c" id="sceneC"></div></div>
+      <span class="tapmark" id="tapMark" aria-hidden="true"><i></i><b data-t="story.tap"></b></span>
     </div>
     <div class="reelbtns"><button class="btn btn-out btn-sm" type="button" id="sceneReplay"><span data-t="story.replay"></span></button><button class="btn btn-gold" type="button" id="sceneNextBtn" aria-disabled="true"><span data-t="story.nextScene"></span><svg viewBox="0 0 48 48"><use href="#i-arrow"/></svg></button></div>
   </div>
@@ -561,7 +591,7 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
       <div class="phone rv rv-1"><div class="notch"></div><div class="scr">
         <div class="dayhead"><span class="mk" id="phoneMark"></span><div><b class="yl">يلّا</b><small id="chatStatus"></small></div><div class="fx"><div><b id="sceneNo">0</b><span><span data-t="day.scene"></span> <i id="sceneOf"></i></span></div><div><b id="fxNum">0</b><span data-t="day.effect"></span></div></div></div>
         <div class="chatlog" id="chatLog"></div>
-      </div></div>
+      </div><button class="btn btn-out btn-sm dayskip" type="button" id="daySkip" data-t="day.skip"></button></div>
       <div class="values rv rv-2">
         <div class="vcard"><canvas class="demo" data-demo="near" width="640" height="320"></canvas><b data-t="day.v1"></b><p data-t="day.v1b"></p></div>
         <div class="vcard"><canvas class="demo" data-demo="streak" width="640" height="320"></canvas><b data-t="day.v2"></b><p data-t="day.v2b"></p></div>
@@ -589,7 +619,10 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
           </div>
           <input type="file" id="photoInput" accept="image/*" class="sr" aria-hidden="true">
           <p class="formnote" data-t="card.photoHint"></p>
+          <div class="photoctl" id="photoCtl" hidden><label><span data-t="card.zoom"></span><input type="range" id="photoZoom" min="1" max="3" step="0.05" value="1"></label><p class="formnote" data-t="card.move"></p></div>
         </div>
+        <div><div class="lbl" data-t="card.optNo"></div><div class="modes" id="optNo" role="group"><button type="button" data-v="1" aria-pressed="true" data-t="card.yes"></button><button type="button" data-v="0" aria-pressed="false" data-t="card.no"></button></div></div>
+        <div><div class="lbl" data-t="card.optPlace"></div><div class="modes" id="optPlace" role="group"><button type="button" data-v="full" aria-pressed="true" data-t="card.placeFull"></button><button type="button" data-v="gov" aria-pressed="false" data-t="card.placeGov"></button><button type="button" data-v="none" aria-pressed="false" data-t="card.placeNone"></button></div></div>
         <div><div class="lbl" data-t="card.colour"></div><div class="swatches" id="swatches" role="group"></div></div>
         <div><div class="lbl" data-t="card.lang"></div><div class="cardlangs" id="cardLangs" role="group"></div></div>
         <div class="share-row">
@@ -667,11 +700,11 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
 
 </div>
 
-<div class="guide" id="guide" hidden><div class="in"><span class="mk" id="guideMark"></span><div class="gt" id="guideText"></div><button class="gchip" id="guideChip" type="button" hidden></button></div></div>
+<div class="guide" id="guide" hidden><div class="in"><span class="mk" id="guideMark"></span><span class="gl" data-t="guide.label"></span><div class="gt" id="guideText"></div><button class="gchip" id="guideChip" type="button" hidden></button></div></div>
 
 <script src="tunisia.js?v=21" defer></script>
 <script src="places.js?v=21" defer></script>
-<script src="i18n.js?v=24" defer></script>
-<script src="app.js?v=24" defer></script>
+<script src="i18n.js?v=25" defer></script>
+<script src="app.js?v=25" defer></script>
 </body>
 </html>
