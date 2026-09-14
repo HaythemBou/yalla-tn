@@ -656,7 +656,23 @@ function makeMap(canvas, tip, opts){
     for (let i = 0; i < shapes.length; i++) if (inGov(shapes[i], x, y)) return i;
     return -1;
   }
-  const inside = (x, y) => govAt(x, y) >= 0;
+  /* Placing 600 dots by testing each dart against every polygon cost ~1.5 s of
+     boot on a laptop and 6 s on a mid phone. The country is rasterised once
+     instead; inside() is then a byte lookup. govAt() stays exact for hover. */
+  let mask = null, mW = 0, mH = 0;
+  function buildMask(){
+    mW = Math.ceil(W); mH = Math.ceil(H);
+    const m = document.createElement('canvas'); m.width = mW; m.height = mH;
+    const g = m.getContext('2d', { willReadFrequently: true });
+    g.fillStyle = '#fff';
+    for (const s of shapes){ g.beginPath(); for (const r of s.rings){ g.moveTo(r[0][0], r[0][1]); for (let k = 1; k < r.length; k++) g.lineTo(r[k][0], r[k][1]); g.closePath(); } g.fill(); }
+    mask = g.getImageData(0, 0, mW, mH).data;
+  }
+  const inside = (x, y) => {
+    if (!mask) return govAt(x, y) >= 0;
+    const xi = x | 0, yi = y | 0;
+    return xi >= 0 && yi >= 0 && xi < mW && yi < mH && mask[(yi * mW + xi) * 4 + 3] > 250;
+  };
   const insideBy = (x, y, m) =>
     inside(x, y) && inside(x + m, y) && inside(x - m, y) && inside(x, y + m) && inside(x, y - m);
 
@@ -676,6 +692,7 @@ function makeMap(canvas, tip, opts){
       g.rings[0].forEach(p => { sx += p[0]; sy += p[1]; n++; });
       g.c = [sx / n, sy / n];
     });
+    buildMask();
 
     _s = 20260913;
     slots = [];
