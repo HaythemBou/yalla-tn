@@ -358,7 +358,7 @@ function drawSeal(x, cx, cy, R, seed, col, alpha, grow, opts){
   function finish(){ holding = false; cancelAnimationFrame(raf); btn.classList.remove('holding'); btn.classList.add('done'); btn.style.setProperty('--p', 1);
     localStorage.setItem('yalla.seal', String(sealSeed)); paint(1);
     $('#made').classList.add('on'); $('#namebox').classList.add('on'); $('#padLabel').hidden = true; $('#padHint').hidden = true; drawCards(); markStep('seal'); assignSealNo();
-    setTimeout(() => $('#nameInput') && $('#nameInput').focus({ preventScroll:true }), 400); }
+    }
   function loop(now){ if (!holding) return; const p = clamp((now-t0)/HOLD, 0, 1); btn.style.setProperty('--p', p); paint(ease3(p)); if (p >= 1){ finish(); return; } raf = requestAnimationFrame(loop); }
   function start(e){ if (btn.classList.contains('done')) return; e.preventDefault();
     sealSeed = hash(String(Date.now()) + '|' + Math.random() + '|' + (navigator.userAgent||'').length);
@@ -370,7 +370,7 @@ function drawSeal(x, cx, cy, R, seed, col, alpha, grow, opts){
 })();
 function showGreet(){ if (!userName) return; set('#greetName','textContent', userName); const g = $('#greet'); if (g) g.classList.add('on'); const i = $('#nameInput'); if (i) i.value = userName; }
 (function name(){ const f = $('#nameForm'), i = $('#nameInput'); if (!f || !i) return;
-  f.addEventListener('submit', (e) => { e.preventDefault(); const v = i.value.trim().slice(0,24); if (!v){ i.focus(); return; } userName = v; localStorage.setItem('yalla.name', v); showGreet(); chatRestart(); drawCards(); markStep('name'); }); showGreet(); if (userName) done.add('name'); })();
+  f.addEventListener('submit', (e) => { e.preventDefault(); const v = i.value.trim().slice(0,24); if (!v){ i.classList.add('shake'); setTimeout(() => i.classList.remove('shake'), 500); return; } userName = v; localStorage.setItem('yalla.name', v); showGreet(); chatRestart(); drawCards(); markStep('name'); }); showGreet(); if (userName) done.add('name'); })();
 
 
 /* ═══════════════════════════════════════════════════════════════════
