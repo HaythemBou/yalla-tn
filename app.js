@@ -1332,7 +1332,5 @@ window.__tourPoke = () => { if (walking) tourPoke(); };
 /* ── go ──────────────────────────────────────────────────────────── */
 paintStrings(); buildThread(); buildQuick(); paintChosen(); buildCardLangs(); buildSwatches(); paintPhotoUI(); paintSealNo(); paintReceipt(); drawCards(); measureProg();
 addEventListener('load', () => { measureProg(); paintThread(); });
-/* lift the door once the fonts and the first frame are in; never later than 3.5 s */
-(function boot(){ const b = $('#boot'); if (!b) return; let gone = false; const lift = () => { if (gone) return; gone = true; requestAnimationFrame(() => { b.classList.add('gone'); setTimeout(() => b.remove(), 700); }); };
-  const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(r => addEventListener('load', r, { once: true }));
-  Promise.all([loaded, (document.fonts && document.fonts.ready) || Promise.resolve()]).then(lift); setTimeout(lift, 3500); })();
+/* the door lifts as soon as the page has built itself (index.html also lifts it on its own after 7 s) */
+if (window.__bootLift) window.__bootLift();
