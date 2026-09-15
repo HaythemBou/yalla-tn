@@ -936,8 +936,9 @@ let currentGov = '', currentDeleg = '';
 const govRow = (ar) => GOV_GEO.find(g => g[0] === ar);
 const govLabel = (ar, l) => { const g = govRow(ar); return !g ? ar : (l||lang) === 'ar' ? g[0] : (l||lang) === 'fr' ? g[1] : g[2]; };
 const delegLabel = (gov, name, l) => { const d = (DELEGS[gov] || []).find(x => x[0] === name); return !d ? name : (l||lang) === 'ar' ? d[0] : d[1]; };
-function pickGov(arName, keepDeleg){ currentGov = arName; if (!keepDeleg) currentDeleg = ''; tmap.setMine(arName, null); localStorage.setItem('yalla.gov', arName); paintChosen(); drawCards(); if (window.__rippleEnable) window.__rippleEnable(); }
-function pickDeleg(name){ currentDeleg = name; localStorage.setItem('yalla.deleg', name); const d = (DELEGS[currentGov] || []).find(x => x[0] === name); tmap.setMine(currentGov, d ? [d[2], d[3]] : null); paintChosen(); drawCards(); }
+let placeTimer = 0; const recordPlace = () => { clearTimeout(placeTimer); placeTimer = setTimeout(() => record('place'), 1500); };
+function pickGov(arName, keepDeleg){ currentGov = arName; if (!keepDeleg) currentDeleg = ''; tmap.setMine(arName, null); localStorage.setItem('yalla.gov', arName); paintChosen(); drawCards(); if (window.__rippleEnable) window.__rippleEnable(); if (!keepDeleg) recordPlace(); }
+function pickDeleg(name){ currentDeleg = name; localStorage.setItem('yalla.deleg', name); const d = (DELEGS[currentGov] || []).find(x => x[0] === name); tmap.setMine(currentGov, d ? [d[2], d[3]] : null); paintChosen(); drawCards(); recordPlace(); }
 function clearPlace(){ currentGov = ''; currentDeleg = ''; localStorage.removeItem('yalla.gov'); localStorage.removeItem('yalla.deleg'); tmap.setMine('', null); paintChosen(); drawCards(); if (window.__rippleEnable) window.__rippleEnable(); const i = $('#placeInput'); if (i){ i.value = ''; i.focus(); } }
 function placeLabel(cl){ if (!currentGov) return ''; const gn = govLabel(currentGov, cl); if (!currentDeleg) return gn; return `${delegLabel(currentGov, currentDeleg, cl)} · ${gn}`; }
 function paintChosen(){ const box = $('#chosen'); if (!box) return; box.classList.toggle('on', !!currentGov); set('#chosenName','textContent', placeLabel(lang)); const pk = $('#picker'); if (pk) pk.classList.toggle('has', !!currentGov);

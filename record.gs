@@ -49,8 +49,8 @@ function doGet(e){
   var byKind = {}, byGov = {}, byDeleg = {}, byLang = {}, byDay = {}, byHour = {}, byDevice = {}, effects = {}, people = {}, words = [], emails = {}, steps = {}, answers = {}, whats = {};
   for (var i = 1; i < rows.length; i++){
     var r = rows[i]; var kind = r[idx.kind], no = String(r[idx.no] || ''), gov = r[idx.gov] || '', lang = r[idx.lang] || '', at = String(r[idx.at] || '').slice(0, 10);
-    byKind[kind] = (byKind[kind] || 0) + 1; if (gov) byGov[gov] = (byGov[gov] || 0) + 1; if (lang) byLang[lang] = (byLang[lang] || 0) + 1; if (at) byDay[at] = (byDay[at] || 0) + 1;
-    if (kind === 'seal'){ var dl = r[idx.deleg]; if (dl) byDeleg[gov + ' · ' + dl] = (byDeleg[gov + ' · ' + dl] || 0) + 1;
+    byKind[kind] = (byKind[kind] || 0) + 1; if (lang) byLang[lang] = (byLang[lang] || 0) + 1; if (at) byDay[at] = (byDay[at] || 0) + 1;
+    if (kind === 'seal'){
       var hr = String(r[idx.at] || '').slice(11, 13); if (hr) byHour[hr] = (byHour[hr] || 0) + 1;
       var ua = String(r[idx.ua] || ''); var dev = /iPhone|iPad/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Mobile/.test(ua) ? 'Other mobile' : 'Desktop'; byDevice[dev] = (byDevice[dev] || 0) + 1; }
     if (kind === 'day' && r[idx.effect] !== ''){ var ef = String(r[idx.effect]); effects[ef] = (effects[ef] || 0) + 1; }
@@ -63,6 +63,7 @@ function doGet(e){
     if (kind === 'day') String(r[idx.answers] || '').split('|').forEach(function(a){ if (a) answers[a] = (answers[a] || 0) + 1; });
     if (kind === 'card' && r[idx.what]) whats[r[idx.what]] = (whats[r[idx.what]] || 0) + 1;
   }
+  Object.keys(people).forEach(function(k){ var p = people[k]; if (p.gov) byGov[p.gov] = (byGov[p.gov] || 0) + 1; if (p.gov && p.deleg) byDeleg[p.gov + ' · ' + p.deleg] = (byDeleg[p.gov + ' · ' + p.deleg] || 0) + 1; });
   var list = Object.keys(people).map(function(k){ var p = people[k]; p.done = Object.keys(p.kinds).length; p.completed = !!p.kinds.complete; p.kinds = Object.keys(p.kinds).join('|'); return p; })
     .sort(function(a, b){ return (b.completed - a.completed) || (b.done - a.done) || (Number(a.no) - Number(b.no)); });
   return out_({ ok: true, rows: rows.length - 1, since: p.since || null, byKind: byKind, byGov: byGov, byDeleg: byDeleg, byLang: byLang, byDay: byDay, byHour: byHour, byDevice: byDevice, effects: effects, steps: steps, answers: answers, whats: whats,
