@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236D4AE0'/%3E%3Ccircle cx='50' cy='50' r='18' fill='%23FFC148'/%3E%3C/svg%3E">
+<title>yalla.tn / dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   yalla.tn — the launch dashboard.
+
+   Two sources. The public counters give visits and seals the moment the
+   page loads. The record sheet (Apps Script URL you paste once) gives
+   everything else: funnel, places, devices, answers, supporters, words.
+   Nothing here is secret, but keep the page unlisted.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{ --bg:#06030F; --ink:#F4F1FF; --ink-2:rgba(244,241,255,.72); --ink-3:rgba(244,241,255,.46); --gold:#FFC148; --gold-2:#FFE7A8; --teal:#3FD2C0; --coral:#FF7A5C; --violet:#A98CFF; --card:rgba(255,255,255,.045); --line:rgba(255,255,255,.1); }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;line-height:1.55;padding:18px 16px 60px;background-image:radial-gradient(ellipse at 50% -10%,rgba(109,74,224,.28),transparent 55%);font-variant-numeric:tabular-nums}
+.ar{font-family:Cairo,sans-serif;direction:rtl;unicode-bidi:isolate}
+h1{font-size:1.5rem;font-weight:900;letter-spacing:-.02em} h1 small{font-weight:600;color:var(--ink-3);font-size:.9rem;margin-left:8px}
+h2{font-size:.82rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.wrap{max-width:1200px;margin:0 auto;display:grid;gap:16px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.top p{color:var(--ink-3);font-size:.84rem;margin-top:2px}
+.src{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.src input{min-width:min(400px,78vw);font:inherit;font-size:.86rem;color:var(--ink);background:rgba(255,255,255,.06);border:1.5px solid transparent;border-radius:999px;padding:10px 16px}
+.src input:focus{outline:none;border-color:var(--gold)}
+.btn{font:inherit;font-weight:800;font-size:.86rem;cursor:pointer;border:none;border-radius:999px;padding:10px 16px;background:var(--gold);color:#160D30}
+.btn.out{background:rgba(255,255,255,.08);color:var(--ink)}
+.status{font-size:.78rem;color:var(--ink-3)} .status.ok{color:var(--teal)} .status.err{color:var(--coral)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi{background:var(--card);border-radius:20px;padding:16px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.kpi small{display:block;font-size:.74rem;color:var(--ink-3);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.kpi b{display:block;font-size:2rem;font-weight:900;color:var(--gold-2);line-height:1.1;margin-top:6px}
+.kpi i{display:block;font-style:normal;font-size:.76rem;color:var(--ink-3);margin-top:4px}
+.kpi.teal b{color:var(--teal)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media (max-width:860px){ .cols{grid-template-columns:1fr} }
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px} @media (max-width:1000px){ .cols3{grid-template-columns:1fr 1fr} } @media (max-width:640px){ .cols3{grid-template-columns:1fr} }
+.card{background:var(--card);border-radius:22px;padding:18px 20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);min-width:0}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:minmax(90px,170px) 1fr 84px;gap:10px;align-items:center;font-size:.84rem}
+.bar span:first-child{color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar i{display:block;height:9px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar i b{display:block;height:100%;background:linear-gradient(90deg,var(--gold-2),var(--gold));border-radius:5px}
+.bar.teal i b{background:linear-gradient(90deg,#BDF3EC,var(--teal))}
+.bar.violet i b{background:linear-gradient(90deg,#E4DBFF,var(--violet))}
+.bar span:last-child{text-align:right;font-weight:800;color:var(--ink-2);font-size:.78rem;white-space:nowrap}
+.funnel{display:grid;gap:8px}
+.step{display:grid;grid-template-columns:130px 1fr 60px 60px;gap:10px;align-items:center;font-size:.84rem}
+.step span:first-child{font-weight:700;color:var(--ink-2)}
+.step i{display:block;height:14px;border-radius:7px;background:rgba(255,255,255,.07);overflow:hidden}
+.step i b{display:block;height:100%;background:linear-gradient(90deg,#BDF3EC,var(--teal));border-radius:7px}
+.step .n{text-align:right;font-weight:800} .step .r{text-align:right;color:var(--ink-3);font-size:.78rem}
+@media (max-width:520px){ .step{grid-template-columns:100px 1fr 44px 44px} }
+.chart{display:flex;align-items:flex-end;gap:3px;height:90px;margin-top:6px}
+.chart i{flex:1;background:linear-gradient(180deg,var(--gold),rgba(255,193,72,.3));border-radius:3px 3px 0 0;min-width:3px;position:relative}
+.chart.teal i{background:linear-gradient(180deg,var(--teal),rgba(63,210,192,.3))}
+.chart i:hover::after{content:attr(data-l);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#160D30;font-size:.68rem;padding:3px 7px;border-radius:8px;white-space:nowrap;z-index:2}
+.axis{display:flex;justify-content:space-between;font-size:.68rem;color:var(--ink-3);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{padding:8px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.7rem;color:var(--ink-3);font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;user-select:none;white-space:nowrap}
+th.on{color:var(--gold)}
+.tag{display:inline-block;font-size:.66rem;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.08);margin:1px 3px 1px 0}
+.tag.ok{background:rgba(63,210,192,.18);color:var(--teal)} .tag.founder{background:rgba(255,193,72,.22);color:var(--gold)}
+.scroll{overflow:auto;max-height:560px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.tools input{font:inherit;font-size:.84rem;color:var(--ink);background:rgba(255,255,255,.06);border:1.5px solid transparent;border-radius:999px;padding:8px 14px;min-width:200px}
+.tools input:focus{outline:none;border-color:var(--gold)}
+.tools label{font-size:.8rem;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.words{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.word{background:rgba(255,255,255,.05);border-radius:16px;padding:12px 14px;font-size:.9rem}
+.word small{display:block;font-size:.72rem;color:var(--ink-3);margin-top:6px}
+.empty{color:var(--ink-3);font-size:.86rem;padding:6px 0}
+.note{font-size:.8rem;color:var(--ink-3)} .note code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px}
+.hint{font-size:.78rem;color:var(--ink-3);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1><a href="index.html" style="color:inherit;text-decoration:none">yalla.tn</a> <small>launch dashboard</small></h1><p>Live counters from the page; everything else from the record sheet. Refreshes every minute.</p></div>
+    <div class="src"><input id="ep" placeholder="Apps Script URL … /exec" spellcheck="false"><button class="btn" id="save">Connect sheet</button><button class="btn out" id="refresh">Refresh</button><button class="btn out" id="csv" hidden>Export CSV</button><span class="status" id="status"></span></div>
+  </div>
+
+  <div class="grid">
+    <div class="kpi"><small>Unique visits</small><b id="kVisits">—</b><i>counted once per person</i></div>
+    <div class="kpi"><small>Seals made</small><b id="kSeals">—</b><i id="kFounders">—</i></div>
+    <div class="kpi teal"><small>Completed the walk</small><b id="kDone">—</b><i id="kDoneRate">from the sheet</i></div>
+    <div class="kpi"><small>Seal → complete</small><b id="kConv">—</b><i>conversion</i></div>
+    <div class="kpi"><small>Emails</small><b id="kMails">—</b><i>unique addresses</i></div>
+    <div class="kpi"><small>Words for the team</small><b id="kWords">—</b><i>latest below</i></div>
+    <div class="kpi"><small>Posters</small><b id="kCards">—</b><i id="kCardsBy">downloads · shares</i></div>
+    <div class="kpi"><small>Today</small><b id="kToday">—</b><i id="kTodayBy">records</i></div>
+  </div>
+
+  <div class="cols">
+    <div class="card"><h2>Records per day</h2><div class="chart" id="byDay"></div><div class="axis" id="byDayAxis"></div><p class="hint" id="dayNote"></p></div>
+    <div class="card"><h2>Seals by hour (UTC)</h2><div class="chart teal" id="byHour"></div><div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div><p class="hint">When people arrive — post an hour before the peak.</p></div>
+  </div>
+
+  <div class="cols">
+    <div class="card"><h2>The journey — how far people go</h2><div class="funnel" id="funnel"></div><p class="hint">Drop between two steps is where to look first.</p></div>
+    <div class="card"><h2>Governorates</h2><div class="bars" id="govs"></div></div>
+  </div>
+
+  <div class="cols3">
+    <div class="card"><h2>Delegations (top 12)</h2><div class="bars" id="delegs"></div></div>
+    <div class="card"><h2>Devices</h2><div class="bars violet" id="devices"></div><h2 style="margin-top:18px">Languages</h2><div class="bars" id="langs"></div></div>
+    <div class="card"><h2>Poster actions</h2><div class="bars" id="whats"></div><h2 style="margin-top:18px">Effect score in "one day"</h2><div class="bars teal" id="effects"></div></div>
+  </div>
+
+  <div class="card"><h2>What people chose in "one day with Yalla"</h2><div class="bars teal" id="answers"></div></div>
+
+  <div class="card">
+    <h2>The first 100 <span class="status" id="firstCount"></span></h2>
+    <p class="hint">By number, 1 to 100 — the founders' places. Everyone is here as soon as they make their imprint.</p>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Name</th><th>Place</th><th>Steps</th><th>Effect</th><th>Lang</th><th>Last seen</th><th>Email</th></tr></thead><tbody id="first100"></tbody></table></div>
+    <p class="empty" id="firstEmpty">Nobody yet.</p>
+  </div>
+  <div class="card">
+    <h2>Everyone else</h2>
+    <div class="tools"><input id="q" placeholder="Search name, place, email…"><label style="display:none"><input type="checkbox" id="fFounders"> first 100 only</label><label><input type="checkbox" id="fDone"> completed only</label><label><input type="checkbox" id="fMail"> with email</label><span class="status" id="count"></span></div>
+    <div class="scroll"><table><thead><tr><th data-k="no" class="on">#</th><th data-k="name">Name</th><th data-k="gov">Place</th><th>Steps</th><th data-k="effect">Effect</th><th data-k="lang">Lang</th><th data-k="last">Last seen</th><th data-k="email">Email</th></tr></thead><tbody id="people"></tbody></table></div>
+    <p class="empty" id="peopleEmpty">Connect the sheet to see supporters.</p>
+  </div>
+
+  <div class="card"><h2>Words for the team</h2><div class="words" id="words"></div><p class="empty" id="wordsEmpty">No words yet.</p></div>
+
+  <p class="note">Connect: open <code>record.gs</code> in the repo, follow the four steps at the top, paste the <code>/exec</code> URL above. The URL is stored in this browser only. Counters: namespace <code>yalla-3andek-2026</code>, keys <code>lights-launch</code> (visits) and <code>seals-launch</code> (seals).</p>
+</div>
+
+<script>
+const NS = 'yalla-3andek-2026', VISITS = 'lights-final', SEALS = 'seals-final', FOUNDERS = 100;
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => Number(n || 0).toLocaleString('en-US');
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+const esc = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
+const STEPS = ['seal','name','story','place','day','card','end'];
+const STEP_LABEL = { seal:'Seal', name:'Name', story:'Story', place:'Place + ripple', day:'One day', card:'Poster', end:'Reached the end' };
+/* only rows from this moment count (the final test round); the sheet keeps everything */
+const SINCE = '2026-09-15T17:00:00Z';
+const DEFAULT_EP = 'https://script.google.com/macros/s/AKfycbw89vxNHT2ACCP69NnCksQ2QCY1xA5GznyhFdHpyYg8L0AP1zKXjAb8YQLfMYkR56V0mQ/exec';
+let ep = localStorage.getItem('yalla.dash.ep') || DEFAULT_EP, data = null, sortK = 'no', sortAsc = true;
+$('#ep').value = ep;
+$('#save').onclick = () => { ep = $('#ep').value.trim(); localStorage.setItem('yalla.dash.ep', ep); load(); };
+$('#refresh').onclick = load;
+const status = (msg, cls) => { const el = $('#status'); el.textContent = msg; el.className = 'status ' + (cls || ''); };
+
+async function counter(key){ try { const r = await fetch(`https://abacus.jasoncameron.dev/get/${NS}/${key}`, { cache:'no-store' }); if (!r.ok) return null; const j = await r.json(); return j.value ?? null; } catch(_){ return null; } }
+function bars(el, obj, cls, labels, limit){ const entries = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]).slice(0, limit || 24); el.innerHTML = ''; if (!entries.length){ el.innerHTML = '<p class="empty">—</p>'; return; } const max = entries[0][1] || 1; const total = entries.reduce((s, e) => s + e[1], 0);
+  entries.forEach(([k, v]) => { const d = document.createElement('div'); d.className = 'bar ' + (cls || ''); d.innerHTML = `<span class="${/[؀-ۿ]/.test(k) ? 'ar' : ''}">${esc((labels && labels[k]) || k)}</span><i><b style="width:${(v/max*100).toFixed(1)}%"></b></i><span>${fmt(v)} · ${pct(v, total)}</span>`; el.appendChild(d); }); }
+function chart(el, entries, labelFn){ el.innerHTML = ''; const mx = Math.max(1, ...entries.map(x => x[1])); entries.forEach(([k, n]) => { const i = document.createElement('i'); i.style.height = Math.max(3, n / mx * 100) + '%'; i.dataset.l = labelFn(k, n); el.appendChild(i); }); }
+
+async function load(){ status('loading…');
+  const [v, sN] = await Promise.all([counter(VISITS), counter(SEALS)]);
+  $('#kVisits').textContent = v === null ? '—' : fmt(v); $('#kSeals').textContent = sN === null ? '—' : fmt(sN);
+  $('#kFounders').textContent = sN === null ? 'counter unreachable' : (sN >= FOUNDERS ? 'first 100 are full' : `${FOUNDERS - sN} founder places left`);
+  if (!ep){ status('no sheet connected'); return; }
+  let d; try { const r = await fetch(ep + (ep.includes('?') ? '&' : '?') + 'stats=1&since=' + encodeURIComponent(SINCE), { cache:'no-store' }); d = await r.json(); } catch(e){ status('cannot read the sheet — check the URL and "Who has access: Anyone"', 'err'); return; }
+  if (!d || !d.ok){ status('the sheet answered with an error', 'err'); return; }
+  data = d; status(`sheet connected · ${fmt(d.rows)} records`, 'ok'); $('#csv').hidden = false;
+  const seals = d.byKind && d.byKind.seal || 0;
+  $('#kDone').textContent = fmt(d.completed); $('#kDoneRate').textContent = `${fmt(seals)} seals recorded`;
+  $('#kConv').textContent = pct(d.completed, seals);
+  $('#kMails').textContent = fmt(d.emails); $('#kWords').textContent = fmt(d.byKind && d.byKind.word || 0);
+  const cards = d.byKind && d.byKind.card || 0; $('#kCards').textContent = fmt(cards); $('#kCardsBy').textContent = Object.entries(d.whats || {}).map(([k, n]) => `${k} ${n}`).join(' · ') || 'downloads · shares';
+  const today = new Date().toISOString().slice(0, 10); $('#kToday').textContent = fmt(d.byDay && d.byDay[today] || 0); $('#kTodayBy').textContent = `records on ${today}`;
+  /* by day, by hour */
+  const days = Object.entries(d.byDay || {}).sort().slice(-60); chart($('#byDay'), days, (k, n) => `${k} · ${n}`); $('#byDayAxis').innerHTML = days.length ? `<span>${days[0][0]}</span><span>${days[days.length-1][0]}</span>` : '';
+  $('#dayNote').textContent = days.length ? `${fmt(d.rows)} records over ${days.length} days · best day ${days.slice().sort((a,b)=>b[1]-a[1])[0].join(' with ')} records` : 'No records yet.';
+  const hours = []; for (let h = 0; h < 24; h++){ const k = String(h).padStart(2, '0'); hours.push([k, d.byHour && d.byHour[k] || 0]); } chart($('#byHour'), hours, (k, n) => `${k}:00 · ${n}`);
+  /* the funnel with step-to-step rates */
+  const f = $('#funnel'); f.innerHTML = ''; const base = d.steps && d.steps.seal || seals || 0; let prev = base;
+  STEPS.forEach((k, i) => { const n = d.steps && d.steps[k] || 0; const row = document.createElement('div'); row.className = 'step'; row.innerHTML = `<span>${STEP_LABEL[k]}</span><i><b style="width:${base ? (n/base*100).toFixed(1) : 0}%"></b></i><span class="n">${fmt(n)}</span><span class="r">${i ? pct(n, prev) : '100%'}</span>`; f.appendChild(row); prev = n || prev; });
+  bars($('#govs'), d.byGov); bars($('#delegs'), d.byDeleg, '', null, 12); bars($('#devices'), d.byDevice, 'violet'); bars($('#langs'), d.byLang, '', { ar:'Arabic', fr:'French', en:'English' });
+  bars($('#whats'), d.whats, '', { story:'Story download', post:'Post download', filter:'Filter download', share:'Share' }); bars($('#effects'), d.effects, 'teal', null, 8); bars($('#answers'), d.answers, 'teal', null, 16);
+  paintPeople(); paintWords();
+}
+function paintPeople(){ if (!data) return; const q = $('#q').value.trim().toLowerCase(); const fF = $('#fFounders').checked, fD = $('#fDone').checked, fM = $('#fMail').checked;
+  const row = (p) => { const no = Number(p.no); return `<td>${esc(p.no)} ${no && no <= FOUNDERS ? '<span class="tag founder">first 100</span>' : ''}</td><td class="ar">${esc(p.name)}</td><td class="ar">${esc(p.gov)}${p.deleg ? ' · ' + esc(p.deleg) : ''}</td><td>${(p.steps || '').split('|').filter(Boolean).map(k => `<span class="tag ${p.completed ? 'ok' : ''}">${esc(STEP_LABEL[k] || k)}</span>`).join('')}</td><td>${esc(p.effect)}</td><td>${esc(p.lang)}</td><td>${esc(p.last)}</td><td>${esc(p.email)}</td>`; };
+  const first = (data.people || []).filter(p => Number(p.no) >= 1 && Number(p.no) <= FOUNDERS).sort((a, b) => Number(a.no) - Number(b.no)); const fb = $('#first100'); fb.innerHTML = ''; first.forEach(p => { const tr = document.createElement('tr'); tr.innerHTML = row(p); fb.appendChild(tr); }); $('#firstCount').textContent = `${first.length} of ${FOUNDERS}`; $('#firstEmpty').style.display = first.length ? 'none' : 'block';
+  let list = (data.people || []).filter(p => !(Number(p.no) >= 1 && Number(p.no) <= FOUNDERS)).filter(p => (!fF || Number(p.no) <= FOUNDERS) && (!fD || p.completed) && (!fM || p.email) && (!q || [p.name, p.gov, p.deleg, p.email, p.no].join(' ').toLowerCase().includes(q)));
+  list = list.slice().sort((a, b) => { let x = a[sortK], y = b[sortK]; if (sortK === 'no' || sortK === 'effect'){ x = Number(x) || 0; y = Number(y) || 0; } else { x = String(x || ''); y = String(y || ''); } return (x < y ? -1 : x > y ? 1 : 0) * (sortAsc ? 1 : -1); });
+  const tb = $('#people'); tb.innerHTML = ''; list.forEach(p => { const tr = document.createElement('tr'); tr.innerHTML = row(p); tb.appendChild(tr); });
+  $('#count').textContent = `${fmt(list.length)} shown`; $('#peopleEmpty').style.display = list.length ? 'none' : 'block'; }
+function paintWords(){ const ws = $('#words'); ws.innerHTML = ''; (data.words || []).forEach(w => { const div = document.createElement('div'); div.className = 'word'; div.innerHTML = `<span class="ar">${esc(w.word)}</span><small>${esc(w.name || '—')} · ${esc(w.gov || '—')} · ${esc(w.at)} · #${esc(w.no || '—')}</small>`; ws.appendChild(div); }); $('#wordsEmpty').style.display = (data.words || []).length ? 'none' : 'block'; }
+['q','fFounders','fDone','fMail'].forEach(id => $('#'+id).addEventListener('input', paintPeople));
+document.querySelectorAll('th[data-k]').forEach(th => th.onclick = () => { const k = th.dataset.k; if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; } document.querySelectorAll('th').forEach(t => t.classList.toggle('on', t.dataset.k === k)); paintPeople(); });
+$('#csv').onclick = () => { if (!data) return; const cols = ['no','name','gov','deleg','lang','steps','effect','completed','first','last','email']; const lines = [cols.join(',')].concat((data.people || []).map(p => cols.map(c => '"' + String(p[c] ?? '').replace(/"/g, '""') + '"').join(','))); const blob = new Blob(['﻿' + lines.join('\n')], { type:'text/csv;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `yalla-supporters-${new Date().toISOString().slice(0,10)}.csv`; a.click(); };
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
