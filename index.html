@@ -7,7 +7,7 @@
 <meta name="description" content="يلّا: اللي يقولّك وين، شكون، و وقتاش. خلّي طابعك، نوّر بلاصتك على خريطة تونس، و عيش نهار واحد معاه.">
 <meta name="theme-color" content="#06030F">
 <script>/* the door: before the launch hour the page shows the teaser. ?preview=1 opens it anyway. Keep LAUNCH equal to teaser.html. */
-(function(){ var LAUNCH = Date.parse('2026-09-15T19:00:00Z'); var q = location.search; if (Date.now() < LAUNCH && !/preview=1/.test(q) && !/open=1/.test(q)) location.replace('teaser.html'); })();</script>
+(function(){ var LAUNCH = Date.parse('2026-09-15T00:00:00Z'); var q = location.search; if (Date.now() < LAUNCH && !/preview=1/.test(q) && !/open=1/.test(q)) location.replace('teaser.html'); })();</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="yalla.tn">
 <meta property="og:title" content="yalla.tn — يلّا، الكلمة اللي تجي قبل أي حاجة تتعمل">
@@ -494,7 +494,7 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
 <!-- the door: a still screen while the page builds itself; app.js lifts it once fonts and the first frame are ready -->
 <div id="boot" aria-hidden="true" style="position:fixed;inset:0;z-index:999;background:#06030F;display:grid;place-items:center;transition:opacity .55s ease"><div style="display:grid;justify-items:center;gap:14px"><i style="width:18px;height:18px;border-radius:50%;background:#FFE7A8;box-shadow:0 0 30px 8px rgba(255,193,72,.55);animation:bootPulse 1.4s ease-in-out infinite"></i><b style="font:900 2.2rem Cairo,system-ui,sans-serif;color:#FFE7A8;letter-spacing:0">يلّا</b><span style="width:120px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;display:block"><span style="display:block;height:100%;width:40%;background:#FFC148;animation:bootBar 1.1s ease-in-out infinite"></span></span><div id="bootSlow" hidden style="text-align:center;font:700 .95rem Cairo,system-ui,sans-serif;color:rgba(244,241,255,.75);margin-top:10px;display:grid;gap:10px;justify-items:center"><span>الاتصال بطيء شويّة…</span><button type="button" onclick="location.reload()" style="font:900 1rem Cairo,system-ui,sans-serif;background:#FFC148;color:#160D30;border:none;border-radius:999px;padding:10px 22px;cursor:pointer">عاود التحميل</button></div></div></div>
 <script>(function(){ var b = document.getElementById('boot'), done = false; window.__bootLift = function(){ if (done) return; done = true; b.classList.add('gone'); setTimeout(function(){ if (b.parentNode) b.parentNode.removeChild(b); }, 700); };
-  setTimeout(function(){ if (!done) document.getElementById('bootSlow').hidden = false; }, 3000); setTimeout(window.__bootLift, 7000); })();</script>
+  setTimeout(function(){ if (!done) document.getElementById('bootSlow').hidden = false; }, 8000); setTimeout(window.__bootLift, 15000); })();</script>
 <style>@keyframes bootPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.25);opacity:1}}@keyframes bootBar{0%{transform:translateX(150%)}100%{transform:translateX(-250%)}}html[dir="ltr"] #boot span span{animation-direction:reverse}#boot.gone{opacity:0;pointer-events:none}</style>
 
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -732,7 +732,7 @@ opacity:0;transform:translateY(24px);transition:opacity .75s cubic-bezier(.2,.8,
 
 <script src="tunisia.js?v=21" defer></script>
 <script src="places.js?v=21" defer></script>
-<script src="i18n.js?v=33" defer></script>
-<script src="app.js?v=33" defer></script>
+<script src="i18n.js?v=34" defer></script>
+<script src="app.js?v=34" defer></script>
 </body>
 </html>

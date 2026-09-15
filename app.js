@@ -12,14 +12,14 @@
 const PREVIEW = /preview=1/.test(location.search);
 const CONFIG = {
   counterNamespace: 'yalla-3andek-2026',
-  counterKey: 'lights-launch',
+  counterKey: 'lights-final',
   counterProviders: [
     (ns, k) => `https://abacus.jasoncameron.dev/hit/${ns}/${k}`,
     (ns, k) => `https://counterapi.com/api/${ns}/${k}/up`,
   ],
   /* a Google Apps Script web app (see record.gs). Empty = records stay in the browser. */
   recordEndpoint: 'https://script.google.com/macros/s/AKfycbw89vxNHT2ACCP69NnCksQ2QCY1xA5GznyhFdHpyYg8L0AP1zKXjAb8YQLfMYkR56V0mQ/exec',
-  sealKey: 'seals-launch',
+  sealKey: 'seals-final',
 
   shareUrl: location.origin + location.pathname,
 };
@@ -60,7 +60,7 @@ set('#brandMark', 'innerHTML', MARK); set('#footMark', 'innerHTML', MARK);
 set('#year', 'textContent', new Date().getFullYear());
 
 /* ═══ i18n ═══════════════════════════════════════════════════════════ */
-(function resetOnce(){ try { if (localStorage.getItem('yalla.v') !== '16'){ Object.keys(localStorage).filter(k => k.startsWith('yalla.')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('yalla.v', '16'); } } catch(_){} })();
+(function resetOnce(){ try { if (localStorage.getItem('yalla.v') !== '17'){ Object.keys(localStorage).filter(k => k.startsWith('yalla.')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('yalla.v', '17'); } } catch(_){} })();
 const S = window.STRINGS;
 let lang = localStorage.getItem('yalla.lang') || 'ar';
 if (!S[lang]) lang = 'ar';
