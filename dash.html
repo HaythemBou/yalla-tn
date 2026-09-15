@@ -116,8 +116,14 @@ th.on{color:var(--gold)}
   <div class="card"><h2>What people chose in "one day with Yalla"</h2><div class="bars teal" id="answers"></div></div>
 
   <div class="card">
-    <h2>Supporters</h2>
-    <div class="tools"><input id="q" placeholder="Search name, place, email…"><label><input type="checkbox" id="fFounders"> first 100 only</label><label><input type="checkbox" id="fDone"> completed only</label><label><input type="checkbox" id="fMail"> with email</label><span class="status" id="count"></span></div>
+    <h2>The first 100 <span class="status" id="firstCount"></span></h2>
+    <p class="hint">By number, 1 to 100 — the founders' places. Everyone is here as soon as they make their imprint.</p>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Name</th><th>Place</th><th>Steps</th><th>Effect</th><th>Lang</th><th>Last seen</th><th>Email</th></tr></thead><tbody id="first100"></tbody></table></div>
+    <p class="empty" id="firstEmpty">Nobody yet.</p>
+  </div>
+  <div class="card">
+    <h2>Everyone else</h2>
+    <div class="tools"><input id="q" placeholder="Search name, place, email…"><label style="display:none"><input type="checkbox" id="fFounders"> first 100 only</label><label><input type="checkbox" id="fDone"> completed only</label><label><input type="checkbox" id="fMail"> with email</label><span class="status" id="count"></span></div>
     <div class="scroll"><table><thead><tr><th data-k="no" class="on">#</th><th data-k="name">Name</th><th data-k="gov">Place</th><th>Steps</th><th data-k="effect">Effect</th><th data-k="lang">Lang</th><th data-k="last">Last seen</th><th data-k="email">Email</th></tr></thead><tbody id="people"></tbody></table></div>
     <p class="empty" id="peopleEmpty">Connect the sheet to see supporters.</p>
   </div>
@@ -135,6 +141,8 @@ const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 const esc = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
 const STEPS = ['seal','name','story','place','day','card','end'];
 const STEP_LABEL = { seal:'Seal', name:'Name', story:'Story', place:'Place + ripple', day:'One day', card:'Poster', end:'Reached the end' };
+/* only rows from this moment count (the final test round); the sheet keeps everything */
+const SINCE = '2026-09-15T17:00:00Z';
 const DEFAULT_EP = 'https://script.google.com/macros/s/AKfycbw89vxNHT2ACCP69NnCksQ2QCY1xA5GznyhFdHpyYg8L0AP1zKXjAb8YQLfMYkR56V0mQ/exec';
 let ep = localStorage.getItem('yalla.dash.ep') || DEFAULT_EP, data = null, sortK = 'no', sortAsc = true;
 $('#ep').value = ep;
@@ -152,7 +160,7 @@ async function load(){ status('loading…');
   $('#kVisits').textContent = v === null ? '—' : fmt(v); $('#kSeals').textContent = sN === null ? '—' : fmt(sN);
   $('#kFounders').textContent = sN === null ? 'counter unreachable' : (sN >= FOUNDERS ? 'first 100 are full' : `${FOUNDERS - sN} founder places left`);
   if (!ep){ status('no sheet connected'); return; }
-  let d; try { const r = await fetch(ep + (ep.includes('?') ? '&' : '?') + 'stats=1', { cache:'no-store' }); d = await r.json(); } catch(e){ status('cannot read the sheet — check the URL and "Who has access: Anyone"', 'err'); return; }
+  let d; try { const r = await fetch(ep + (ep.includes('?') ? '&' : '?') + 'stats=1&since=' + encodeURIComponent(SINCE), { cache:'no-store' }); d = await r.json(); } catch(e){ status('cannot read the sheet — check the URL and "Who has access: Anyone"', 'err'); return; }
   if (!d || !d.ok){ status('the sheet answered with an error', 'err'); return; }
   data = d; status(`sheet connected · ${fmt(d.rows)} records`, 'ok'); $('#csv').hidden = false;
   const seals = d.byKind && d.byKind.seal || 0;
@@ -173,10 +181,11 @@ async function load(){ status('loading…');
   paintPeople(); paintWords();
 }
 function paintPeople(){ if (!data) return; const q = $('#q').value.trim().toLowerCase(); const fF = $('#fFounders').checked, fD = $('#fDone').checked, fM = $('#fMail').checked;
-  let list = (data.people || []).filter(p => (!fF || Number(p.no) <= FOUNDERS) && (!fD || p.completed) && (!fM || p.email) && (!q || [p.name, p.gov, p.deleg, p.email, p.no].join(' ').toLowerCase().includes(q)));
+  const row = (p) => { const no = Number(p.no); return `<td>${esc(p.no)} ${no && no <= FOUNDERS ? '<span class="tag founder">first 100</span>' : ''}</td><td class="ar">${esc(p.name)}</td><td class="ar">${esc(p.gov)}${p.deleg ? ' · ' + esc(p.deleg) : ''}</td><td>${(p.steps || '').split('|').filter(Boolean).map(k => `<span class="tag ${p.completed ? 'ok' : ''}">${esc(STEP_LABEL[k] || k)}</span>`).join('')}</td><td>${esc(p.effect)}</td><td>${esc(p.lang)}</td><td>${esc(p.last)}</td><td>${esc(p.email)}</td>`; };
+  const first = (data.people || []).filter(p => Number(p.no) >= 1 && Number(p.no) <= FOUNDERS).sort((a, b) => Number(a.no) - Number(b.no)); const fb = $('#first100'); fb.innerHTML = ''; first.forEach(p => { const tr = document.createElement('tr'); tr.innerHTML = row(p); fb.appendChild(tr); }); $('#firstCount').textContent = `${first.length} of ${FOUNDERS}`; $('#firstEmpty').style.display = first.length ? 'none' : 'block';
+  let list = (data.people || []).filter(p => !(Number(p.no) >= 1 && Number(p.no) <= FOUNDERS)).filter(p => (!fF || Number(p.no) <= FOUNDERS) && (!fD || p.completed) && (!fM || p.email) && (!q || [p.name, p.gov, p.deleg, p.email, p.no].join(' ').toLowerCase().includes(q)));
   list = list.slice().sort((a, b) => { let x = a[sortK], y = b[sortK]; if (sortK === 'no' || sortK === 'effect'){ x = Number(x) || 0; y = Number(y) || 0; } else { x = String(x || ''); y = String(y || ''); } return (x < y ? -1 : x > y ? 1 : 0) * (sortAsc ? 1 : -1); });
-  const tb = $('#people'); tb.innerHTML = ''; list.forEach(p => { const tr = document.createElement('tr'); const no = Number(p.no);
-    tr.innerHTML = `<td>${esc(p.no)} ${no && no <= FOUNDERS ? '<span class="tag founder">first 100</span>' : ''}</td><td class="ar">${esc(p.name)}</td><td class="ar">${esc(p.gov)}${p.deleg ? ' · ' + esc(p.deleg) : ''}</td><td>${(p.steps || '').split('|').filter(Boolean).map(k => `<span class="tag ${p.completed ? 'ok' : ''}">${esc(STEP_LABEL[k] || k)}</span>`).join('')}</td><td>${esc(p.effect)}</td><td>${esc(p.lang)}</td><td>${esc(p.last)}</td><td>${esc(p.email)}</td>`; tb.appendChild(tr); });
+  const tb = $('#people'); tb.innerHTML = ''; list.forEach(p => { const tr = document.createElement('tr'); tr.innerHTML = row(p); tb.appendChild(tr); });
   $('#count').textContent = `${fmt(list.length)} shown`; $('#peopleEmpty').style.display = list.length ? 'none' : 'block'; }
 function paintWords(){ const ws = $('#words'); ws.innerHTML = ''; (data.words || []).forEach(w => { const div = document.createElement('div'); div.className = 'word'; div.innerHTML = `<span class="ar">${esc(w.word)}</span><small>${esc(w.name || '—')} · ${esc(w.gov || '—')} · ${esc(w.at)} · #${esc(w.no || '—')}</small>`; ws.appendChild(div); }); $('#wordsEmpty').style.display = (data.words || []).length ? 'none' : 'block'; }
 ['q','fFounders','fDone','fMail'].forEach(id => $('#'+id).addEventListener('input', paintPeople));

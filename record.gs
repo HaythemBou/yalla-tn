@@ -19,6 +19,8 @@
  *          answers · word · email · what · seed · ua
  */
 var HEADERS = ['at','kind','no','name','gov','deleg','lang','steps','effect','answers','word','email','what','seed','ua'];
+/* GET ?wipe=<WIPE_KEY> empties the sheet (the header stays). Keep the key private. */
+var WIPE_KEY = '6ea1d2dc5e008232';
 
 function sheet_(){
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -37,10 +39,13 @@ function doPost(e){
   } catch (err) { return out_({ ok: false, error: String(err) }); }
 }
 
-/* GET ?stats=1  → everything the dashboard shows.  GET alone → a health check. */
+/* GET ?stats=1  → everything the dashboard shows (add &since=ISO to count only rows from that moment).  GET alone → a health check.  GET ?wipe=KEY → empties the sheet. */
 function doGet(e){
-  var sh = sheet_(); var rows = sh.getDataRange().getValues(); var idx = {}; HEADERS.forEach(function(k, i){ idx[k] = i; });
-  if (!(e && e.parameter && e.parameter.stats)) return out_({ ok: true, rows: rows.length - 1 });
+  var sh = sheet_(); var p = (e && e.parameter) || {};
+  if (p.wipe){ if (p.wipe !== WIPE_KEY) return out_({ ok: false, error: 'wrong key' }); var n = sh.getLastRow() - 1; if (n > 0) sh.deleteRows(2, n); return out_({ ok: true, wiped: n }); }
+  var rows = sh.getDataRange().getValues(); var idx = {}; HEADERS.forEach(function(k, i){ idx[k] = i; });
+  if (p.since){ var since = String(p.since); rows = [rows[0]].concat(rows.slice(1).filter(function(r){ return String(r[idx.at] || '') >= since; })); }
+  if (!p.stats) return out_({ ok: true, rows: rows.length - 1, since: p.since || null });
   var byKind = {}, byGov = {}, byDeleg = {}, byLang = {}, byDay = {}, byHour = {}, byDevice = {}, effects = {}, people = {}, words = [], emails = {}, steps = {}, answers = {}, whats = {};
   for (var i = 1; i < rows.length; i++){
     var r = rows[i]; var kind = r[idx.kind], no = String(r[idx.no] || ''), gov = r[idx.gov] || '', lang = r[idx.lang] || '', at = String(r[idx.at] || '').slice(0, 10);
@@ -60,6 +65,6 @@ function doGet(e){
   }
   var list = Object.keys(people).map(function(k){ var p = people[k]; p.done = Object.keys(p.kinds).length; p.completed = !!p.kinds.complete; p.kinds = Object.keys(p.kinds).join('|'); return p; })
     .sort(function(a, b){ return (b.completed - a.completed) || (b.done - a.done) || (Number(a.no) - Number(b.no)); });
-  return out_({ ok: true, rows: rows.length - 1, byKind: byKind, byGov: byGov, byDeleg: byDeleg, byLang: byLang, byDay: byDay, byHour: byHour, byDevice: byDevice, effects: effects, steps: steps, answers: answers, whats: whats,
-    people: list.slice(0, 500), words: words.slice(-200).reverse(), emails: Object.keys(emails).length, completed: list.filter(function(p){ return p.completed; }).length });
+  return out_({ ok: true, rows: rows.length - 1, since: p.since || null, byKind: byKind, byGov: byGov, byDeleg: byDeleg, byLang: byLang, byDay: byDay, byHour: byHour, byDevice: byDevice, effects: effects, steps: steps, answers: answers, whats: whats,
+    people: list.slice(0, 3000), words: words.slice(-200).reverse(), emails: Object.keys(emails).length, completed: list.filter(function(p){ return p.completed; }).length });
 }
