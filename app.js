@@ -60,7 +60,7 @@ set('#brandMark', 'innerHTML', MARK); set('#footMark', 'innerHTML', MARK);
 set('#year', 'textContent', new Date().getFullYear());
 
 /* ═══ i18n ═══════════════════════════════════════════════════════════ */
-(function resetOnce(){ try { if (localStorage.getItem('yalla.v') !== '17'){ Object.keys(localStorage).filter(k => k.startsWith('yalla.')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('yalla.v', '17'); } } catch(_){} })();
+(function resetOnce(){ try { if (localStorage.getItem('yalla.v') !== '18'){ Object.keys(localStorage).filter(k => k.startsWith('yalla.')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('yalla.v', '18'); } } catch(_){} })();
 const S = window.STRINGS;
 let lang = localStorage.getItem('yalla.lang') || 'ar';
 if (!S[lang]) lang = 'ar';
