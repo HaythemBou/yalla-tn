@@ -1326,6 +1326,15 @@ function tourNext(thank){ if (tourBusy) return; tourBusy = true; clearInterval(t
   const last = tourI >= TOUR.length - 1; if (last) return;
   setTimeout(() => tourStep(tourI + 1), thank ? 2600 : 200); }
 window.__tourPoke = () => { if (walking) tourPoke(); };
+(function fold(){ const bar = $('#guide'), b = $('#guideFold'); if (!bar || !b) return;
+  const set = (min) => { bar.classList.toggle('min', min); document.body.classList.toggle('guidemin', min); b.textContent = min ? '?' : '−'; b.setAttribute('aria-label', min ? 'open the guide' : 'fold the guide'); try { localStorage.setItem('yalla.guidemin', min ? '1' : '0'); } catch(_){} };
+  b.onclick = () => set(!bar.classList.contains('min'));
+  /* the mark alone also opens it again */
+  const mk = $('#guideMark'); if (mk){ mk.style.cursor = 'pointer'; mk.onclick = () => { if (bar.classList.contains('min')) set(false); }; }
+  set(localStorage.getItem('yalla.guidemin') === '1');
+  /* while a finger is on the screen the bar steps aside, so it never covers what it points at */
+  let t = 0; const dim = () => { bar.style.opacity = '.25'; clearTimeout(t); t = setTimeout(() => { bar.style.opacity = ''; }, 900); };
+  addEventListener('touchstart', dim, { passive: true }); addEventListener('scroll', dim, { passive: true }); })();
 (function walk(){ const btn = $('#startBtn'), bar = $('#guide'); if (!btn || !bar) return;
   btn.onclick = () => { walking = true; document.body.classList.add('walk'); bar.hidden = false; record('start'); tourStep(0); };
 })();
