@@ -1031,7 +1031,10 @@ function chatRestart(){ const log = $('#chatLog'); if (!log || !chatStarted) ret
 function chatScroll(){ newMsgCheck(); }
 const lastSeen = () => { const last = $('#chatLog') && $('#chatLog').lastElementChild; if (!last) return true; const r = last.getBoundingClientRect(); return r.top < innerHeight - 24 && r.bottom > 0; };
 async function whenRead(){ while (!lastSeen()) await sleep(250); }
-function newMsgCheck(){ const tag = $('#newMsg'); if (!tag) return; const show = chatStarted && !chatDone && !lastSeen() && ($('#chatLog').getBoundingClientRect().top < innerHeight); tag.hidden = !show; }
+function newMsgCheck(){ const tag = $('#newMsg'); if (!tag) return; const log = $('#chatLog'); const r = log && log.getBoundingClientRect();
+  /* only while the conversation itself is on the screen — never over another part of the page */
+  const inView = !!r && r.top < innerHeight - 90 && r.bottom > 90;
+  tag.hidden = !(chatStarted && !chatDone && inView && !lastSeen()); }
 addEventListener('scroll', () => newMsgCheck(), { passive: true });
 (function newMsgTag(){ const tag = $('#newMsg'); if (!tag) return; tag.onclick = () => { const last = $('#chatLog').lastElementChild; if (last) last.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }); }; })();
 function bubble(kind, text){ const log = $('#chatLog'); const b = document.createElement('div'); b.className = 'bub ' + kind; b.innerHTML = glowYalla(text); log.appendChild(b); chatScroll(log); return b; }
