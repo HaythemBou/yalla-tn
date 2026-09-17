@@ -111,7 +111,7 @@ const STEPS = ['seal','name','story','place','day','card','end'];
 const STEP_EL = { seal:'#pad', name:'#namebox', story:'#stage', place:'#picker', day:'#day .phone', card:'#card .cardframe', end:'#end .head' };
 const done = new Set();
 function measureProg(){ const docH = document.documentElement.scrollHeight - innerHeight; scrollProg = docH > 0 ? clamp(scrollY/docH, 0, 1) : 1; prog = Math.max(scrollProg*.3, done.size/STEPS.length); progListeners.forEach(f => f(prog)); }
-function markStep(k){ if (done.has(k)) return; done.add(k); if (k === 'seal') document.body.classList.add('sealed'); measureProg(); paintThread(); paintReceipt(); if (window.__dnaRedraw) window.__dnaRedraw(); if (window.__tourPoke) window.__tourPoke(); if (k === 'end'){ paintSealNo(); record('complete'); } }
+function markStep(k){ if (done.has(k)) return; done.add(k); try { localStorage.setItem('yalla.at', k === 'seal' || k === 'name' ? 'hero' : k === 'place' ? 'map' : k); } catch(_){} if (k === 'seal') document.body.classList.add('sealed'); measureProg(); paintThread(); paintReceipt(); if (window.__dnaRedraw) window.__dnaRedraw(); if (window.__tourPoke) window.__tourPoke(); if (k === 'end'){ paintSealNo(); record('complete'); } }
 addEventListener('scroll', measureProg, { passive:true }); addEventListener('resize', measureProg);
 
 /* the receipt: what you did */
@@ -1343,6 +1343,26 @@ window.__tourPoke = () => { if (walking) tourPoke(); };
 })();
 
 /* ── go ──────────────────────────────────────────────────────────── */
+/* Coming back: the browser is told not to restore the scroll (it used to drop people
+   in the middle of the page, which reads as "nothing is there"), and a small bar offers
+   to continue where they stopped. */
+try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(_){}
+(function resume(){
+  const SEC = ['hero','story','map','day','card','end'];
+  const save = (id) => { try { localStorage.setItem('yalla.at', id); } catch(_){} };
+  let tick = 0;
+  addEventListener('scroll', () => { if (tick) return; tick = setTimeout(() => { tick = 0;
+    let best = '', bestTop = 1e9; for (const id of SEC){ const el = document.getElementById(id); if (!el) continue; const r = el.getBoundingClientRect(); if (r.top <= innerHeight*.5 && r.bottom > innerHeight*.2 && Math.abs(r.top) < bestTop){ best = id; bestTop = Math.abs(r.top); } }
+    if (best) save(best); }, 600); }, { passive: true });
+  const bar = $('#back'); if (!bar) return;
+  const at = (() => { try { return localStorage.getItem('yalla.at') || ''; } catch(_){ return ''; } })();
+  if (!sealSeed || !at || at === 'hero' || !document.getElementById(at)) return;
+  set('#backHi', 'textContent', (userName ? t('back.hi').replace('{name}', userName) : t('back.hi0')));
+  bar.hidden = false;
+  $('#backGo').onclick = () => { const el = document.getElementById(at); if (el) el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); bar.hidden = true; };
+  $('#backFresh').onclick = () => { try { ['yalla.at'].forEach(k => localStorage.removeItem(k)); } catch(_){} bar.hidden = true; scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); };
+})();
+
 paintStrings(); buildThread(); buildQuick(); paintChosen(); buildCardLangs(); buildSwatches(); paintPhotoUI(); paintSealNo(); paintReceipt(); drawCards(); measureProg();
 addEventListener('load', () => { measureProg(); paintThread(); });
 /* the door lifts as soon as the page has built itself (index.html also lifts it on its own after 7 s) */
